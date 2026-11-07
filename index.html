@@ -814,7 +814,7 @@ function cityOptions(value='',placeholder='全部縣市'){return [['',placeholde
 function renderDatalists(){
   const places=new Set([...DB.places.map(p=>p.name),...Object.keys(DB.hsr),...DB.shortNames.map(p=>p[0])]);
   const opts=list=>[...list].map(v=>`<option value="${esc(v)}"></option>`).join('');
-  $('datalists').innerHTML=`<datalist id="placeList">${opts(places)}</datalist><datalist id="regionList">${opts(DB.regions)}</datalist><datalist id="attireList">${opts(DB.attire)}</datalist><datalist id="prepLabelList">${opts([...DB.prepLabels,'中心開設'])}</datalist>`;
+  $('datalists').innerHTML=`<datalist id="placeList">${opts(places)}</datalist><datalist id="regionList">${opts(DB.regions)}</datalist><datalist id="attireList">${opts(DB.attire)}</datalist><datalist id="prepLabelList">${opts(PREP_LABELS)}</datalist>`;
 }
 
 // 側欄：行程資訊區
@@ -885,12 +885,13 @@ function expectTip(i){
 }
 // 場部時間按鈕：已加入的不再出現；「場部」「中心開設」單獨使用，選了其中之一其他全部隱藏；
 // 選了場檢、部署、重點、全員任一項，就不再提供「場部」「中心開設」；選了「重點」就不再提供「部署」
+const PREP_LABELS=['場檢','部署','重點','全員','場部','中心開設'];// 場部時間項目固定，不再由資料庫設定
 const PREP_SOLO=['場部','中心開設','依中心勤務命令辦理'];
 function prepButtons(s){
   const used=s.prepTimes.map(p=>p.label.trim()).filter(Boolean);
   if(used.some(l=>PREP_SOLO.includes(l)))return '';
   const groupUsed=used.length>0;
-  return [...new Set([...DB.prepLabels,'中心開設'])].filter(l=>!used.includes(l)&&!(groupUsed&&PREP_SOLO.includes(l))&&!(l==='部署'&&used.includes('重點'))).map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('');
+  return PREP_LABELS.filter(l=>!used.includes(l)&&!(groupUsed&&PREP_SOLO.includes(l))&&!(l==='部署'&&used.includes('重點'))).map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('');
 }
 // 地點卡片預設收合；展開狀態在重畫編輯區時保留
 let placeCardOpen=false,timeCardOpen=true,advCardOpen=true;
@@ -1411,7 +1412,7 @@ function dbRender(){
     c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
     const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
-    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('prepLabels','場部時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
+    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
   }else{
     c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
