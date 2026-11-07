@@ -334,6 +334,8 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 }
 @media print{header,aside,.editor,.preview-toolbar,.validation,.splitter,.mobile-nav,.mobile-bottom{display:none!important}.preview-pane{padding:0;background:#fff;overflow:visible}.paper{box-shadow:none;padding:0;transform:none!important;margin:0!important}.survey tr.selected-row td{background:transparent}.main-col{display:block}}
 .rail-seat-row>span{white-space:nowrap}
+.block-title.title-with-input{justify-content:flex-start}
+.title-time-input{width:170px;font-size:18px;letter-spacing:.5px}
 </style>
 </head>
 <body data-mobile-view="list">
@@ -830,13 +832,11 @@ const TIME_LABELS={visit:'抵離時間',hsr_depart:'抵離時間（到站-發車
 function expectTip(i){
   const s=state.stops[i],a=autoArrive(i),mm=timeMismatch(i);
   if(mm)return `<div class="tip warn" data-derived="expect">抵達 ${esc(s.arrive)} 與推算 ${esc(mm)} 不符<button type="button" class="small" data-act="applyExpected">改為 ${esc(mm)}</button></div>`;
-  if(s.type==='hsr_arrive'&&pairOf(i))return '<div data-derived="expect" hidden></div>';
-  if(isArriveType(s))return `<div class="tip" data-derived="expect">${pairOf(i)?'在本站設定車次／航班與抵達時間，會同步顯示於前一站。':'請先新增對應的出發站。'}</div>`;
-  return `<div class="tip" data-derived="expect">${a?(s.arrive?'抵達時間與推算一致':`未填抵達時間，依前站推算：${esc(a)}`):i===0?'第一站：填寫抵離時間後，離開與備車時間會自動反推':'填寫車行時間後，會依前站離開時間推算抵達'}</div>`;
+  return '<div data-derived="expect" hidden></div>';
 }
 function editorStop(s,i){
   const legField='';
-  const timeField=`<label class="field"><span>${TIME_LABELS[s.type]}</span><input data-range="time" value="${esc(sideTimeValue(s))}" placeholder="${esc(sideTimePlaceholder(i))}" inputmode="numeric" maxlength="9" autocomplete="off"></label>`;
+  const timeField=`<input class="title-time-input" data-range="time" value="${esc(sideTimeValue(s))}" placeholder="${esc(sideTimePlaceholder(i))}" inputmode="numeric" maxlength="9" autocomplete="off" aria-label="抵離時間">`;
   let special='';
   if(isArriveType(s)){
     const air=s.type==='air_arrive',airlines=[...new Set(['立榮航空','華信航空',s.airline].filter(Boolean))];
@@ -847,14 +847,13 @@ function editorStop(s,i){
   <div class="editor-columns"><div class="editor-main">
   <div class="basic-single-row">${selectEl('type','行程類型',tripRole(s),Object.entries(TRIP_TYPES))}${selectEl('city','縣市',s.city,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('place','場所名稱',s.place,{list:'editorPlaceList',ph:'選擇或輸入場所'})}<datalist id="editorPlaceList">${placeOptions(s.city,s.type)}</datalist></div>
   ${special}
-    <div class="block time-section"><div class="block-title"><h3>時間</h3></div>
-      ${legField||timeField?`<div class="grid-2">${legField}${timeField}</div>`:''}
+    <div class="block time-section"><div class="block-title title-with-input"><h3>時間</h3>${timeField}</div>
       ${expectTip(i)}
       <div class="sub-title"><span>場部時間</span><span class="hint">藍字列在時間欄</span></div>
       ${s.prepTimes.map((p,k)=>`<div class="prep-row"><input data-prep="${k}" data-prep-field="label" value="${esc(p.label)}" list="prepLabelList" aria-label="名稱"><input data-prep="${k}" data-prep-field="time" value="${esc(p.time)}" placeholder="0900" maxlength="4" inputmode="numeric" aria-label="時間"><button type="button" class="small danger" data-prep-del="${k}" aria-label="刪除">×</button></div>`).join('')}
       <div class="tool-row">${DB.prepLabels.map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('')}<button type="button" class="small" data-prep-add="依中心勤務命令辦理">＋ 依中心命令</button></div>
     </div>
-    ${!isRail(s)?`<div class="block route-section"><div class="block-title"><h3>地點</h3><span class="hint">可換行，換行位置照原樣輸出</span></div>
+    ${s.type==='visit'?`<div class="block route-section"><div class="block-title"><h3>地點</h3><span class="hint">可換行，換行位置照原樣輸出</span></div>
       <div class="grid-2">${field('placeLines','場所其他行（樓層、廳別）',s.placeLines,{area:true,ph:'3樓宴會廳'})}${field('event','活動名稱（藍字）',s.event,{area:true,ph:'參訪'})}</div>
       <div class="grid-2">${selectEl('privacy','公開性',s.privacy,[['','不註記'],['不公開','不公開'],['公開','公開']])}${field('people','人數（約）',s.people,{ph:'20'})}</div>
       ${field('address','地址',s.address,{area:true,rows:2})}
