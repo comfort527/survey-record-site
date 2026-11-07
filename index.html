@@ -259,7 +259,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .mobile-nav,.mobile-bottom{display:none}
 
 /* ── 中尺寸 ── */
-@media(max-width:1200px){.editor-columns{display:flex;flex-direction:column;gap:10px}.editor-columns>.editor-main,.editor-columns>.editor-side{display:contents}.editor-main>.basic-single-row{order:1}.editor-main>.transport-inline-block{order:2}.editor-main>.place-card{order:3}.editor-main>.time-section{order:4}.editor-main>.contact-section{order:5}.editor-side>.unit-section{order:6}.editor-main>.notes-section{order:7}}
+@media(max-width:1200px){.editor-columns{display:flex;flex-direction:column;gap:10px;align-items:stretch}.editor-main>*,.editor-side>*{min-width:0;max-width:100%}.editor-columns>.editor-main,.editor-columns>.editor-side{display:contents}.editor-main>.basic-single-row{order:1}.editor-main>.transport-inline-block{order:2}.editor-main>.place-card{order:3}.editor-main>.time-section{order:4}.editor-main>.contact-section{order:5}.editor-side>.unit-section{order:6}.editor-main>.notes-section{order:7}}
 @media(min-width:1401px){.basic-single-row{width:calc((100% - 12px) / 2.15)}}
 @media(max-width:1000px){
   .workspace{grid-template-columns:290px minmax(0,1fr)}
@@ -1270,7 +1270,7 @@ new ResizeObserver(()=>fitPreview()).observe(document.querySelector('.paper-wrap
 
 // 手機
 const isMobileLayout=()=>matchMedia('(max-width:700px)').matches;
-function setMobileView(view){document.body.dataset.mobileView=view;for(const b of document.querySelectorAll('[data-mobile-tab]'))b.setAttribute('aria-pressed',String(b.dataset.mobileTab===view));if(view==='preview')requestAnimationFrame(fitPreview);if(isMobileLayout())window.scrollTo({top:0})}
+function setMobileView(view){if(view==='edit')requestAnimationFrame(regrowLines);document.body.dataset.mobileView=view;for(const b of document.querySelectorAll('[data-mobile-tab]'))b.setAttribute('aria-pressed',String(b.dataset.mobileTab===view));if(view==='preview')requestAnimationFrame(fitPreview);if(isMobileLayout())window.scrollTo({top:0})}
 for(const b of document.querySelectorAll('[data-mobile-tab]'))b.onclick=()=>setMobileView(b.dataset.mobileTab);
 for(const b of document.querySelectorAll('[data-mobile-action]'))b.onclick=()=>{const id=b.dataset.mobileAction;$(id).click();if(id==='addVisit')setMobileView('edit')};
 $('mobileMore').onclick=()=>{const open=document.body.classList.toggle('mobile-more');$('mobileMore').setAttribute('aria-expanded',String(open))};
@@ -1521,6 +1521,10 @@ $('editor').addEventListener('toggle',e=>{if(e.target.matches?.('[data-place-car
 // 地區複選：點選單外、按 Esc 或「完成」即收起
 document.addEventListener('click',e=>{const done=e.target.closest('[data-close-picker]');for(const d of document.querySelectorAll('details.region-picker[open]'))if(done?d.contains(done):!d.contains(e.target))d.open=false});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')for(const d of document.querySelectorAll('details.region-picker[open]'))d.open=false});
+
+// 多行輸入框在隱藏時算不出高度（手機的編輯頁），顯示後或視窗改變時重新計算
+function regrowLines(){for(const t of document.querySelectorAll('#editor .line-row textarea'))if(t.offsetParent)autoGrow(t)}
+let regrowTimer;addEventListener('resize',()=>{clearTimeout(regrowTimer);regrowTimer=setTimeout(regrowLines,150)});
 
 // ── 啟動 ──
 cloudStoreCfg();renderDatalists();render();
