@@ -354,6 +354,8 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .place-card[open] .place-summary{display:none}
 .place-card:not([open]) .place-hint{display:none}
 .block.notes-section{background:#fbeceb;border-color:#efd3d0}
+.contact-title{margin-top:10px;padding-top:8px;border-top:1px dashed #b9c9e6}
+.line-row.kind-contact .line-kind:disabled{opacity:1;cursor:default}
 </style>
 </head>
 <body data-mobile-view="list">
@@ -472,7 +474,7 @@ function setTripRole(s,role){const air=/機場$/.test(canon(s.place))||(!s.place
 const LEG_MODES={car:'車行',walk:'步行',none:'不列'};
 const TONES=['','red','blue','green','black'];
 const HEX={blue:'0000FF',red:'EE0000',green:'006600'};
-const LINE_KINDS={rites:[['step','步驟'],['note','※'],['pre','說明']],notes:[['note','※'],['contact','聯絡'],['pre','一般']]};
+const LINE_KINDS={rites:[['step','步驟'],['note','※'],['pre','說明']],notes:[['note','※'],['pre','一般']]};
 const PT=724/522; // 預覽：表格寬 522pt 對應 724px
 
 // ── 常用資料庫預設值（可在「常用資料庫」修改，並以「匯出已校訂 HTML」寫回檔案）──
@@ -713,7 +715,7 @@ function notesCell(i){
   const s=state.stops[i],ps=[];let prev=null;
   if(s.advance.length){const names=s.advance.map((nm,k)=>k===0&&s.advancePhone?nm+advancePhone(nm):nm);ps.push(P([R('先遣：'),R(names.join('、'))],{jc:'left',line:240,gap:1}));prev='advance'}
   if(isRail(s)&&s.deputyOn){ps.push(P(richRuns(`${stationShort(s.place)}值班副站長：${hsrPhone(s.place)||'？'}`,{c:'green'}),{jc:'left',line:240,gap:prev?0:1}));prev='deputy'}
-  for(const l of s.notes){
+  for(const l of [...s.notes.filter(x=>x.kind==='contact'),...s.notes.filter(x=>x.kind!=='contact')]){
     if(!l.text.trim())continue;
     const c=lineColor('notes',l),b=lineBold('notes',l),gap=l.kind==='note'||l.kind!==prev?1:0;
     if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'left',line:240,gap,hang:240}));
@@ -902,7 +904,7 @@ function editorStop(s,i){
     </div>
   </div><div class="editor-side">
     <div class="block unit-section">${railSeatingEditor(s)}${s.type==='hsr_depart'?'':lineEditor(s,'rites')}</div>
-    <div class="block contact-section">${advanceEditor(s)}</div>
+    <div class="block contact-section">${advanceEditor(s)}${s.type==='hsr_depart'?'':lineEditor(s,'notes',{only:'contact'})}</div>
     ${s.type==='hsr_depart'?'':`<div class="block notes-section">${lineEditor(s,'notes')}</div>`}
   </div></div>`;
 }
@@ -952,15 +954,17 @@ function advanceEditor(s){
   return `<div class="item-list-title"><h3>先遣</h3>${toggleEl('advancePhone','第一位附電話',s.advancePhone)}</div><div class="chip-grid">${all.map(n=>{const k=s.advance.indexOf(n);return `<button type="button" class="chip ${k>=0?'on':''}" data-chip="advance" data-name="${esc(n)}">${k>=0?`<span class="order">${k+1}</span>`:''}${esc(n)}</button>`}).join('')}</div><div class="add-inline"><input data-add-person="advance" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div>${isRail(s)?`<label class="toggle deputy">${checkbox('deputyOn',s.deputyOn)}列出「${esc(stationShort(s.place))}值班副站長：${esc(hsrPhone(s.place)||'資料庫未設定')}」</label>`:''}<div class="sub-title"></div>`;
 }
 function toneLabel(key,l){const c=lineColor(key,l);if(key==='notes'&&l.kind==='note')return c==='red'?'待確認':c==='blue'?'已確認':c===''?'一般':'綠字';return {red:'紅',blue:'藍',green:'綠','':'黑'}[c]}
-function lineEditor(s,key){
-  const lines=s[key];let n=0;
-  let h=`<div class="item-list-title"><h3>${key==='rites'?'儀節':'注意事項'}</h3>${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
-  h+=`<div class="phrase-row">${(key==='rites'?DB.ritePhrases:DB.notePhrases).map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}${key==='notes'?DB.contactRoles.map(r=>`<button type="button" class="chip-btn contact" data-role="${esc(r)}">＋${esc(r)}</button>`).join(''):''}</div>`;
-  h+=lines.map((l,i)=>{
+function lineEditor(s,key,opt={}){
+  const contact=opt.only==='contact',scope=key==='notes'?(contact?'contact':'other'):'';
+  const rows=s[key].map((l,i)=>[l,i]).filter(([l])=>key!=='notes'||(contact?l.kind==='contact':l.kind!=='contact'));let n=0;
+  const title=contact?'聯絡人':key==='rites'?'儀節':'注意事項';
+  let h=contact?`<div class="item-list-title contact-title"><h3>聯絡人</h3><button type="button" class="small" data-add-contact>＋ 聯絡人</button></div>`:`<div class="item-list-title"><h3>${title}</h3>${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
+  if(!contact)h+=`<div class="phrase-row">${(key==='rites'?DB.ritePhrases:DB.notePhrases).map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}</div>`;
+  h+=rows.map(([l,i],k)=>{
     const tag=l.kind==='step'?(l.text.trim()?(++n)+'.':'#'):l.kind==='note'?'※':l.kind==='contact'?'聯絡':'說明',c=lineColor(key,l);
-    return `<div class="line-row kind-${l.kind} tone-${c||'black'} ${lineBold(key,l)?'bold':''}" data-list="${key}" data-index="${i}"><button type="button" class="line-kind" data-line-act="kind" title="切換類型：${LINE_KINDS[key].map(x=>x[1]).join('／')}">${tag}</button><textarea rows="1" data-line-text="${key}" data-index="${i}" aria-label="${key==='rites'?'儀節':'注意事項'}第 ${i+1} 行">${esc(l.text)}</textarea><div class="line-tools"><button type="button" class="small tone-btn" data-line-act="tone" title="切換顏色"><span class="tone-dot ${c||'black'}"></span>${toneLabel(key,l)}</button>${l.kind==='step'||l.kind==='pre'?`<button type="button" class="small bold-btn ${lineBold(key,l)?'on':''}" data-line-act="bold" title="粗體">粗</button>`:''}<button type="button" class="small" data-line-act="up" ${i===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-line-act="down" ${i===lines.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-line-act="del" aria-label="刪除">×</button></div></div>`;
+    return `<div class="line-row kind-${l.kind} tone-${c||'black'} ${lineBold(key,l)?'bold':''}" data-list="${key}" data-index="${i}" ${scope?`data-scope="${scope}"`:''}><button type="button" class="line-kind" data-line-act="kind" ${contact?'disabled':''} title="${contact?'聯絡人（綠字）':`切換類型：${LINE_KINDS[key].map(x=>x[1]).join('／')}`}">${tag}</button><textarea rows="1" data-line-text="${key}" data-index="${i}" aria-label="${title}第 ${k+1} 行" ${contact?'placeholder="例如：主辦王○○09xx-xxxxxx"':''}>${esc(l.text)}</textarea><div class="line-tools"><button type="button" class="small tone-btn" data-line-act="tone" title="切換顏色"><span class="tone-dot ${c||'black'}"></span>${toneLabel(key,l)}</button>${l.kind==='step'||l.kind==='pre'?`<button type="button" class="small bold-btn ${lineBold(key,l)?'on':''}" data-line-act="bold" title="粗體">粗</button>`:''}<button type="button" class="small" data-line-act="up" ${k===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-line-act="down" ${k===rows.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-line-act="del" aria-label="刪除">×</button></div></div>`;
   }).join('');
-  if(!lines.length)h+=`<p class="empty-hint">${key==='rites'?'按「＋ 步驟」或點選上方片語開始；可直接貼上整段文字，會自動分行。':'按「＋ ※」新增待確認事項；確認後點「待確認」改為「已確認」（藍字）。'}</p>`;
+  if(!rows.length&&!contact)h+=`<p class="empty-hint">${key==='rites'?'按「＋ 步驟」或點選上方片語開始；可直接貼上整段文字，會自動分行。':'按「＋ ※」新增待確認事項；確認後點「待確認」改為「已確認」（藍字）。'}</p>`;
   return h;
 }
 function autoGrow(t){t.style.height='auto';t.style.height=Math.max(36,t.scrollHeight+2)+'px'}
@@ -1176,6 +1180,7 @@ $('editor').addEventListener('click',e=>{
   if(b.dataset.prepDel!==undefined){pushUndo();s.prepTimes.splice(+b.dataset.prepDel,1);editorRender();previewRender();saveSoon();return}
   if(b.dataset.lineAdd){pushUndo();const key=b.dataset.lineAdd;s[key].push(blankLine(b.dataset.kind,''));editorRender();previewRender();saveSoon();focusLine(key,s[key].length-1,0);return}
   if(b.dataset.phrase){pushUndo();const key=b.dataset.phrase,text=b.dataset.text,note=text.startsWith('※');const l=blankLine(key==='notes'||note?'note':'step',text.replace(/^※\s*/,''));s[key].push(l);editorRender();previewRender();saveSoon();const t=$('editor').querySelector(`textarea[data-line-text="${key}"][data-index="${s[key].length-1}"]`);if(t){t.focus();const k=t.value.indexOf('…');if(k>=0)t.setSelectionRange(k,k+1);else t.setSelectionRange(t.value.length,t.value.length)}return}
+  if(b.dataset.addContact!==undefined){pushUndo();const at=s.notes.reduce((m,l,i)=>l.kind==='contact'?i+1:m,0);s.notes.splice(at,0,blankLine('contact',''));editorRender();previewRender();saveSoon();focusLine('notes',at,0);return}
   if(b.dataset.role){pushUndo();s.notes.push(blankLine('contact',b.dataset.role+(b.dataset.role.endsWith('人')?'：':'')));editorRender();previewRender();saveSoon();focusLine('notes',s.notes.length-1,'end');return}
   if(b.dataset.mark){const key=b.dataset.mark;let t=lastLineField?.isConnected&&lastLineField.dataset.lineText===key?lastLineField:null;if(!t){notify('請先點選要標記的那一行');return}const [a,z]=[t.selectionStart,t.selectionEnd];t.setRangeText(z>a?'*'+t.value.slice(a,z)+'*':'*',a,z,'end');t.dispatchEvent(new Event('input',{bubbles:true}));t.focus();return}
   if(b.dataset.lineAct){
@@ -1184,8 +1189,7 @@ $('editor').addEventListener('click',e=>{
     if(act==='kind'){const kinds=LINE_KINDS[key].map(k=>k[0]);l.kind=kinds[(kinds.indexOf(l.kind)+1)%kinds.length];if(l.kind==='note')l.text=l.text.replace(/^※\s*/,'')}
     else if(act==='tone'){const order=key==='notes'&&l.kind==='note'?['','blue','black','green']:['','red','blue','green','black'];const k=order.indexOf(l.tone);l.tone=order[(k+1)%order.length]}
     else if(act==='bold'){l.bold=!lineBold(key,l)}
-    else if(act==='up'&&i>0)[list[i-1],list[i]]=[list[i],list[i-1]];
-    else if(act==='down'&&i<list.length-1)[list[i+1],list[i]]=[list[i],list[i+1]];
+    else if(act==='up'||act==='down'){const sc=row.dataset.scope,same=list.map((x,k)=>k).filter(k=>!sc||(sc==='contact')===(list[k].kind==='contact')),pos=same.indexOf(i),j=same[pos+(act==='up'?-1:1)];if(j!==undefined)[list[i],list[j]]=[list[j],list[i]]}
     else if(act==='del')list.splice(i,1);
     editorRender();previewRender();saveSoon();return;
   }
@@ -1378,7 +1382,7 @@ function dbRender(){
     c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
     const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
-    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('contactRoles','聯絡人稱謂')}${box('prepLabels','場部時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
+    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('prepLabels','場部時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
   }else{
     c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
