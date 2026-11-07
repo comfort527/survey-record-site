@@ -344,6 +344,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .title-time-input{width:170px;font-size:18px;letter-spacing:.5px}
 .rail-pick{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px;padding-left:4px}
 .rail-pick .chip{font-size:15px;padding:2px 10px}
+.region-options .region-done{grid-column:1/-1;width:100%;margin-top:6px}
 </style>
 </head>
 <body data-mobile-view="list">
@@ -840,7 +841,7 @@ function editorGlobal(){
   return `<div class="editor-heading"><div class="eyebrow">文件設定</div><span class="hint">標題日期取自上方「勤務日期」</span></div>
   <div class="editor-columns"><div class="editor-main">
     <div class="block basic-block">
-      <div class="grid-5"><div class="field"><span>地區</span><details class="region-picker"><summary>${esc(regions.join('、')||'選擇地區')}</summary><div class="region-options">${regionOptions.map(name=>`<label class="toggle"><input type="checkbox" data-weather-region="${esc(name)}" ${regions.includes(name)?'checked':''}>${esc(name)}</label>`).join('')}</div></details></div><label class="field"><span>氣溫（度）</span><input data-range="temp" value="${esc(tempText(g))}" placeholder="18-20" inputmode="numeric" maxlength="5" autocomplete="off"></label>${field('g.rain','降雨（%）',g.rain,{ph:'0'})}${field('g.attire','服裝',g.attire,{list:'attireList',ph:'勤務衫'})}${selectEl('g.escort',`隨行 ${toggleEl('g.escortOn','列出',g.escortOn)}`,g.escort,escortOptions)}</div>
+      <div class="grid-5"><div class="field"><span>地區</span><details class="region-picker"><summary>${esc(regions.join('、')||'選擇地區')}</summary><div class="region-options">${regionOptions.map(name=>`<label class="toggle"><input type="checkbox" data-weather-region="${esc(name)}" ${regions.includes(name)?'checked':''}>${esc(name)}</label>`).join('')}<button type="button" class="small primary region-done" data-close-picker>完成</button></div></details></div><label class="field"><span>氣溫（度）</span><input data-range="temp" value="${esc(tempText(g))}" placeholder="18-20" inputmode="numeric" maxlength="5" autocomplete="off"></label>${field('g.rain','降雨（%）',g.rain,{ph:'0'})}${field('g.attire','服裝',g.attire,{list:'attireList',ph:'勤務衫'})}${selectEl('g.escort',`隨行 ${toggleEl('g.escortOn','列出',g.escortOn)}`,g.escort,escortOptions)}</div>
     </div>
     <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-3 origin-row">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}<label class="field"><span>離開時間</span><input data-side="depart" value="${esc(departOf())}" placeholder="0900" inputmode="numeric" maxlength="4" autocomplete="off"></label></div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
   </div><div class="editor-side">
@@ -1450,6 +1451,10 @@ $('cloudList').addEventListener('click',e=>{
 });
 $('cloudFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;cloudRun('上傳 JSON',async()=>{await cloudLoadList();let n=0;for(const f of files){const text=await f.text();const d=JSON.parse(text);if(!Array.isArray(d?.stops))throw Error(f.name+' 不是會勘紀錄 JSON');const name=safeFileName(f.name.replace(/\.json$/i,''))+'.json',old=cloudFiles.find(x=>x.name===name);await cloudPut(CLOUD_DIR+'/'+name,text,'上傳會勘紀錄：'+name,old?.sha);n++}await cloudLoadList();cloudStatus(`已上傳 ${n} 個檔案`)})});
 $('cloudBtn').onclick=()=>{$('cloudToken').value=cloudCfg.token||'';$('cloudRepo').value=cloudCfg.repo||'comfort527/road-table-data';$('cloudSetup').open=!cloudReady();cloudStatus('');cloudRenderState();cloudListRender();$('cloudDialog').showModal();if(cloudReady())cloudRun('讀取雲端清單',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')})};
+
+// 地區複選：點選單外、按 Esc 或「完成」即收起
+document.addEventListener('click',e=>{const done=e.target.closest('[data-close-picker]');for(const d of document.querySelectorAll('details.region-picker[open]'))if(done?d.contains(done):!d.contains(e.target))d.open=false});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')for(const d of document.querySelectorAll('details.region-picker[open]'))d.open=false});
 
 // ── 啟動 ──
 cloudStoreCfg();renderDatalists();render();
