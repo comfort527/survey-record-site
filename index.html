@@ -2,7 +2,7 @@
 <html lang="zh-Hant"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>會勘紀錄表編輯器 V1.2</title>
+<title>會勘紀錄表編輯器 V1.3</title>
 <style>[hidden]{display:none!important}
 :root{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;color:#243443;background:#e8eef2;font-size:20px;--line:#d3dde3;--blue:#176a70;--soft:#dceeec;--orange:#d9822b;--save:#1f6fb5}
 *{box-sizing:border-box}
@@ -339,7 +339,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 <body data-mobile-view="list">
 <header>
   <div class="header-document">
-    <h1>會勘紀錄表編輯器<span class="version">V1.2</span></h1>
+    <h1>會勘紀錄表編輯器<span class="version">V1.3</span></h1>
     <button id="mobileMore" type="button" aria-expanded="false" aria-controls="headerActions">更多</button>
     <label class="header-field"><span>存檔名稱</span><input id="headerName" aria-label="存檔名稱"></label>
     <label class="header-field"><span>勤務日期</span><input id="headerDate" type="date" aria-label="勤務日期"></label>
@@ -347,7 +347,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
   </div>
   <div class="header-actions" id="headerActions">
     <div class="header-group" role="group" aria-label="工具"><button id="databaseBtn" type="button">常用資料庫</button><button id="htmlExportBtn" type="button">匯出已校訂 HTML</button></div>
-    <div class="header-group" role="group" aria-label="讀取"><button id="importWordBtn" type="button" title="讀取舊的會勘紀錄表 Word 檔（.docx），轉成可編輯的行程">匯入舊 Word</button><button id="openJsonBtn" type="button">讀取 JSON</button></div>
+    <div class="header-group" role="group" aria-label="讀取"><button id="openJsonBtn" type="button">讀取 JSON</button></div>
     <div class="header-group" role="group" aria-label="雲端"><button id="cloudBtn" type="button" title="儲存與讀取雲端的會勘 JSON 及常用資料庫">雲端儲存</button></div>
     <div class="header-group" role="group" aria-label="存檔與輸出"><button id="saveBtn" type="button" class="save">儲存JSON</button><button id="wordBtn" type="button" class="primary">下載 Word</button></div>
   </div>
@@ -375,7 +375,6 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 <nav class="mobile-bottom" aria-label="檔案與行程操作"><button type="button" data-mobile-action="openJsonBtn">讀取 JSON</button><button type="button" data-mobile-action="saveBtn">儲存 JSON</button><button type="button" data-mobile-action="addVisit">＋ 場所</button><button type="button" class="primary" data-mobile-action="wordBtn">下載 Word</button></nav>
 <div id="datalists" hidden></div>
 <input type="file" id="jsonFile" accept=".json,application/json" hidden>
-<input type="file" id="wordFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
 <input type="file" id="dbFile" accept=".json,application/json" hidden>
 
 <dialog id="confirmDialog"><h2 id="confirmTitle"></h2><p id="confirmText"></p><div class="dialog-actions"><button id="cancelConfirm" type="button">取消</button><button id="acceptConfirm" type="button" class="primary">確定</button></div></dialog>
@@ -425,7 +424,7 @@ const normDigits=v=>String(v??'').replace(/[０-９]/g,d=>String.fromCharCode(d.
 const canon=v=>String(v??'').replace(/\s/g,'').replace(/台/g,'臺');
 
 // 依開啟的 HTML 檔名同步版本號（例如「會勘紀錄表編輯器V1.1.html」）；無法辨識時用預設值。
-const APP_VERSION=(()=>{let f='';try{f=decodeURIComponent(location.pathname.split('/').pop()||'')}catch{}const m=f.match(/V(\d+(?:\.\d+)*)/i);return m?'V'+m[1]:'V1.2'})();
+const APP_VERSION=(()=>{let f='';try{f=decodeURIComponent(location.pathname.split('/').pop()||'')}catch{}const m=f.match(/V(\d+(?:\.\d+)*)/i);return m?'V'+m[1]:'V1.3'})();
 document.title='會勘紀錄表編輯器 '+APP_VERSION;
 document.querySelector('header h1 .version').textContent=APP_VERSION;
 
@@ -827,11 +826,11 @@ function editorGlobal(){
     <div class="block contact-section"><div class="block-title"><h3>寓所</h3><span class="count">${g.residence.length} 人</span></div><div class="chip-grid">${chips(g.residence,'residence',DB.residence)}</div><div class="add-inline"><input data-add-person="residence" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
   </div></div>`;
 }
-const TIME_LABELS={visit:'抵離時間',hsr_depart:'抵離時間（到站-發車）',hsr_arrive:'抵離時間（到站-離站）',air_depart:'抵離時間（到場-起飛）',air_arrive:'抵離時間（到場-離開）'};
+const TIME_LABELS={visit:'抵離時間',hsr_depart:'抵離時間（到站-發車）',hsr_arrive:'抵離時間',air_depart:'抵離時間（到場-起飛）',air_arrive:'抵離時間（到場-離開）'};
 function expectTip(i){
   const s=state.stops[i],a=autoArrive(i),mm=timeMismatch(i);
   if(mm)return `<div class="tip warn" data-derived="expect">抵達 ${esc(s.arrive)} 與推算 ${esc(mm)} 不符<button type="button" class="small" data-act="applyExpected">改為 ${esc(mm)}</button></div>`;
-  if(s.type==='hsr_arrive'&&pairOf(i))return '<div class="tip" data-derived="expect">抵離時間前段是高鐵到站時間，後段是離站時間。</div>';
+  if(s.type==='hsr_arrive'&&pairOf(i))return '<div data-derived="expect" hidden></div>';
   if(isArriveType(s))return `<div class="tip" data-derived="expect">${pairOf(i)?'在本站設定車次／航班與抵達時間，會同步顯示於前一站。':'請先新增對應的出發站。'}</div>`;
   return `<div class="tip" data-derived="expect">${a?(s.arrive?'抵達時間與推算一致':`未填抵達時間，依前站推算：${esc(a)}`):i===0?'第一站：填寫抵離時間後，離開與備車時間會自動反推':'填寫車行時間後，會依前站離開時間推算抵達'}</div>`;
 }
@@ -851,7 +850,7 @@ function editorStop(s,i){
     <div class="block time-section"><div class="block-title"><h3>時間</h3></div>
       ${legField||timeField?`<div class="grid-2">${legField}${timeField}</div>`:''}
       ${expectTip(i)}
-      <div class="sub-title"><span>勤前時間</span><span class="hint">藍字列在時間欄</span></div>
+      <div class="sub-title"><span>場部時間</span><span class="hint">藍字列在時間欄</span></div>
       ${s.prepTimes.map((p,k)=>`<div class="prep-row"><input data-prep="${k}" data-prep-field="label" value="${esc(p.label)}" list="prepLabelList" aria-label="名稱"><input data-prep="${k}" data-prep-field="time" value="${esc(p.time)}" placeholder="0900" maxlength="4" inputmode="numeric" aria-label="時間"><button type="button" class="small danger" data-prep-del="${k}" aria-label="刪除">×</button></div>`).join('')}
       <div class="tool-row">${DB.prepLabels.map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('')}<button type="button" class="small" data-prep-add="依中心勤務命令辦理">＋ 依中心命令</button></div>
     </div>
@@ -993,9 +992,9 @@ function placeCommitted(s){if(!s)return;const p=findPlace(s.place),city=p?.city|
 function addStop(type){
   pushUndo();
   const last=state.stops[state.stops.length-1];
-  if(type==='rail'){const a=blankStop('hsr_depart','高鐵臺北站'),b=blankStop('hsr_arrive','');applyPlace(a,false);a.prepTimes=[{label:'場部',time:''}];b.prepTimes=[{label:'場部',time:''}];state.stops.push(a,b);selected=a.id}
-  else if(type==='air'){const a=blankStop('air_depart',''),b=blankStop('air_arrive','');a.prepTimes=[{label:'場部',time:''}];b.prepTimes=[{label:'場部',time:''}];state.stops.push(a,b);selected=a.id}
-  else{const s=blankStop('visit','');s.prepTimes=[{label:'場檢',time:''},{label:'部署',time:''}];state.stops.push(s);selected=s.id}
+  if(type==='rail'){const a=blankStop('hsr_depart','高鐵臺北站'),b=blankStop('hsr_arrive','');applyPlace(a,false);state.stops.push(a,b);selected=a.id}
+  else if(type==='air'){const a=blankStop('air_depart',''),b=blankStop('air_arrive','');state.stops.push(a,b);selected=a.id}
+  else{const s=blankStop('visit','');state.stops.push(s);selected=s.id}
   if(!last&&!state.global.returnMinutes)state.global.returnMinutes='';
   render();saveSoon();
   const input=$('editor').querySelector('[data-path="place"]');if(input&&!isMobileLayout())input.focus();
@@ -1249,119 +1248,6 @@ function wordFileName(){const d=state.global.date.replaceAll('-','').slice(4)||'
 async function doWord(){const b=$('wordBtn');b.disabled=true;b.textContent='產製中…';try{download(await buildWord(),wordFileName());notify('Word 已產製，請以 Word 檢查分頁後使用')}catch(e){notify('產製失敗：'+e.message)}finally{b.disabled=false;b.textContent='下載 Word'}}
 $('wordBtn').onclick=()=>{const e=errors();if(e.length)ask('仍有資料待確認',e.slice(0,12).join('\n')+(e.length>12?`\n…另有 ${e.length-12} 項`:'')+'\n\n是否仍要產製草稿？缺漏處會以紅色「？」標示。',doWord,'仍要產製');else doWord()};
 
-// 匯入舊的會勘紀錄表 Word：依段落與文字顏色還原成可編輯的行程
-const kids=(el,name)=>Array.from(el.children).filter(n=>n.namespaceURI===W&&n.localName===name);
-const wAttr=(el,name)=>el?el.getAttributeNS(W,name)||el.getAttribute('w:'+name)||'':'';
-function toneOfHex(hex){if(!hex||hex==='auto'||!/^[0-9a-f]{6}$/i.test(hex))return '';const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);if(b>140&&r<110&&g<150)return 'blue';if(r>150&&g<110&&b<110)return 'red';if(g>=80&&r<110&&b<110)return 'green';return ''}
-function runProps(r){const rp=kids(r,'rPr')[0],bEl=rp&&kids(rp,'b')[0],bv=wAttr(bEl,'val'),cEl=rp&&kids(rp,'color')[0];return {b:!!bEl&&!['0','false','off'].includes(bv),c:toneOfHex(wAttr(cEl,'val'))}}
-function paragraphLines(p){
-  const lines=[];let cur=[];
-  const walk=el=>{for(const n of el.children){if(n.namespaceURI!==W)continue;const ln=n.localName;if(['del','moveFrom','pPr','rPr','instrText'].includes(ln))continue;if(ln==='r'){const pr=runProps(n);for(const x of n.children){if(x.namespaceURI!==W)continue;if(x.localName==='t')cur.push({t:x.textContent,...pr});else if(x.localName==='br'||x.localName==='cr'){lines.push(cur);cur=[]}else if(x.localName==='tab')cur.push({t:' ',...pr})}}else walk(n)}};
-  walk(p);lines.push(cur);return lines;
-}
-function cellLines(tc){const pr=kids(tc,'tcPr')[0],vm=pr&&kids(pr,'vMerge')[0];if(vm&&wAttr(vm,'val')!=='restart')return [];const out=[];for(const p of kids(tc,'p'))for(const runs of paragraphLines(p)){const text=normDigits(runs.map(r=>r.t).join('')).trim();if(text)out.push({runs:runs.map(r=>({...r,t:normDigits(r.t)})),text})}return out}
-function dominantTone(runs){const n={};for(const r of runs){const len=r.t.replace(/[\s？?※*()（）]/g,'').length;if(len)n[r.c]=(n[r.c]||0)+len}return Object.entries(n).sort((a,b)=>b[1]-a[1])[0]?.[0]||''}
-function mostlyBold(runs){let b=0,all=0;for(const r of runs){const len=r.t.replace(/\s/g,'').length;all+=len;if(r.b)b+=len}return all>0&&b/all>=.5}
-function markedText(runs,lineTone){let out='',red='';const flush=()=>{if(red){out+=/[^？?\s]/.test(red)?'*'+red.trim()+'*':red;red=''}};for(const r of runs){if(r.c==='red'&&lineTone!=='red')red+=r.t;else{flush();out+=r.t}}flush();return out.replace(/\*\s*\*/g,'').trim()}
-const PHONE=/\s*0\d{1,3}-?\d{3,4}-?\d{3,4}/;
-const newAdvance=new Set();
-function parseSurveyTable(rows){
-  const st=blankState(),g=st.global,warn=[];let phase='title',pendingLeg=null,departSeen=false;
-  g.autoDepart=false;g.autoPrep=false;g.escortOn=false;g.escort='';
-  for(const tr of rows){
-    const tcs=kids(tr,'tc'),cells=tcs.map(cellLines),all=cells.flat().map(l=>l.text).join('\n');
-    if(!all.trim())continue;
-    if(phase==='title'){if(/會勘/.test(all)){parseTitle(cells.flat());phase='head'}continue}
-    if(phase==='head'&&/時間/.test(all)&&/儀節/.test(all)){phase='body';continue}
-    if(tcs.length===1){
-      const text=cells[0].map(l=>l.text).join('\n'),leg=text.match(/(車行|步行)時間\s*(\d*)/),esc2=text.match(/座車隨行\s*[-－]\s*([^)）\s]+)/),ret=text.match(/[(（][^()（）]*?(\d{4})?\s*時?\s*返\s*([^)）]+)[)）]/);
-      if(esc2){g.escortOn=true;g.escort=esc2[1]}
-      for(const l of cells[0])if(/本隊/.test(l.text)){const [left,right='']=l.text.split(/寓所(?:值班)?\s*[:：]/);const names=t=>t.split(/[、，,\/／\s]+/).map(x=>x.trim()).filter(Boolean);g.crew=names(left.replace(/^.*?本隊\s*[:：]/,'').replace(/[；;]\s*$/,''));g.residence=names(right)}
-      if(ret){g.returnMinutes=leg?.[2]||'';g.returnTo=longName(ret[2].trim());pendingLeg=null}
-      else if(leg)pendingLeg={mode:leg[1]==='步行'?'walk':'car',minutes:leg[2]||''};
-      continue;
-    }
-    if(tcs.length<4){warn.push('略過一列無法辨識的表格');continue}
-    if(!departSeen&&/離/.test(cells[0].map(l=>l.text).join(''))&&!cells[2].length){
-      departSeen=true;g.depart=(cells[0].map(l=>l.text).join('').match(/\d{4}/)||[''])[0];g.origin=cells[1].map(l=>l.text).join('');g.prep=(cells[3].map(l=>l.text).join('').match(/\d{4}/)||[''])[0];continue;
-    }
-    departSeen=true;st.stops.push(parseStopRow(cells,pendingLeg));pendingLeg=null;
-  }
-  // 相鄰的高鐵站或機場、且中間沒有車行列 → 配成出發／抵達
-  for(let i=0;i<st.stops.length-1;i++){
-    const a=st.stops[i],b=st.stops[i+1],rail=x=>/^高鐵.+站/.test(canon(x.place)),air=x=>/機場/.test(x.place);
-    if(b.legMode!=='none')continue;
-    if(rail(a)&&rail(b)){a.type='hsr_depart';b.type='hsr_arrive';if(!a.trainArr&&timeValid(b.arrive))a.trainArr=b.arrive;b.legMode='car';i++}
-    else if(air(a)&&air(b)){a.type='air_depart';b.type='air_arrive';b.legMode='car';if(!a.flightMinutes&&b.flightMinutes)a.flightMinutes=b.flightMinutes;i++}
-  }
-  for(const s of st.stops){if(s.type==='visit'&&s.trainNo&&/^高鐵/.test(s.place))s.type='hsr_depart';s.legMode='car'}
-  // 原檔時間與推算一致時改回自動，之後改車行時間會連動
-  migrateTransportFields(st);
-  const state0=state;state=st;
-  if(timeValid(g.depart)&&st.stops[0]){g.autoDepart=true;if(departOf()!==g.depart)g.autoDepart=false}
-  else if(!timeValid(g.depart))g.autoDepart=true;
-  if(!timeValid(g.prep)||g.prep===addMin(departOf(),-prepLead()))g.autoPrep=true;
-  st.stops.forEach(s=>{if(!s.city)s.city=findPlace(s.place)?.city||guessCity(s.place,s.address)});
-  state=state0;
-  const md=g.date.replaceAll('-','').slice(4);st.name=(md||'')+'會勘紀錄表';
-  return {state:st,warn};
-  function parseTitle(lines){
-    const t=lines.map(l=>l.text).join('\n'),m=t.match(/(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);if(m)g.date=`${+m[1]+1911}-${pad2(m[2])}-${pad2(m[3])}`;
-    const w=lines.slice(1).map(l=>l.text).join('');g.region=(w.match(/^\s*(.+?)地區/)||[])[1]||'';
-    const tm=w.match(/(\d+)\s*[-－~～]\s*(\d+)\s*度/);if(tm){g.tempLow=tm[1];g.tempHigh=tm[2]}else{const t1=w.match(/(\d+)\s*度/);if(t1)g.tempLow=g.tempHigh=t1[1]}
-    g.rain=(w.match(/降雨\s*(\d+)\s*%/)||[])[1]||'';g.attire=(w.match(/[（(]\s*([^()（）]+?)\s*[)）]\s*$/)||[])[1]||'';
-  }
-}
-function parseStopRow(cells,leg){
-  const s=blankStop();
-  if(leg){s.legMode=leg.mode;s.legMinutes=leg.minutes}else s.legMode='none';
-  const [tc,pc,rc,nc]=cells;
-  // 時間欄
-  let first=tc[0]?.text||'';if(/[-－]$/.test(first)&&tc[1])first+=tc.splice(1,1)[0].text;
-  const tm=first.match(/(\d{3,4})\s*(?:[-－~～]\s*(\d{3,4}))?/);if(tm){s.arrive=tm[1].padStart(4,'0');s.depart=tm[2]?tm[2].padStart(4,'0'):''}
-  for(const l of tc.slice(1)){const m=l.text.match(/^(.*?)\s*(\d{4})?\s*$/);if(m&&(m[1]||m[2]))s.prepTimes.push({label:m[1].trim(),time:m[2]||''})}
-  // 地點欄：第一組粗體為場所、其後的粗體為活動，非粗體為地址
-  const groups=[],address=[];let tone=null;
-  for(const l of pc){
-    const t=l.text;let m;
-    if((m=t.match(/^[(（]?\s*(不公開|公開)\s*[)）]?$/))){s.privacy=m[1];continue}
-    if((m=t.match(/^約\s*([\d,，]+)\s*人$/))){s.people=m[1].replace(/[,，]/g,'');continue}
-    if((m=t.match(/^(.+?)車次\((\d{4}|____)-(\d{4}|____)\)$/))){s.type='hsr_arrive';s.trainNo=m[1]==='____'?'':m[1];if(timeValid(m[3]))s.arrive=m[3];continue}
-    if((m=t.match(/^(立榮航空|華信航空|____)(?:-(.*?))?\((\d{4}|____)-(\d{4}|____)\)$/))){s.type='air_arrive';s.airline=m[1]==='____'?'':m[1];s.flightNo=m[2]||'';if(timeValid(m[4]))s.arrive=m[4];continue}
-    if((m=t.match(/^(\S+?)\s*車次$/))){s.trainNo=m[1];continue}
-    if((m=t.match(/^[(（]\s*(\d{4})\s*[-－~～]\s*(\d{4})\s*[)）]$/))){if(!s.depart)s.depart=m[1];s.trainArr=m[2];continue}
-    if(!mostlyBold(l.runs)&&groups.length){address.push(t);continue}
-    const tn=dominantTone(l.runs);if(!groups.length||tn!==tone){groups.push([]);tone=tn}groups[groups.length-1].push(t);
-  }
-  const placeLines=groups[0]||[];s.place=placeLines[0]||'';s.placeLines=placeLines.slice(1).join('\n');s.event=groups.slice(1).flat().join('\n');s.address=address.join('\n');
-  // 儀節欄
-  for(const l of rc){
-    const t=l.text,tn=dominantTone(l.runs);let m;
-    if((m=t.match(/^飛行時間\s*(\d+)\s*分/))){s.flightMinutes=m[1];continue}
-    if(/^※/.test(t)){const ln=blankLine('note',markedText(l.runs,tn).replace(/^※\s*/,''));ln.tone=tn==='blue'?'':tn==='red'?'red':tn==='green'?'green':'black';s.rites.push(ln);continue}
-    if((m=t.match(/^(\d{1,2})\s*[.．、]\s*/))){const ln=blankLine('step',markedText(l.runs,tn).replace(/^\d{1,2}\s*[.．、]\s*/,''));const firstRun=l.runs.find(r=>r.t.trim());if(firstRun&&!firstRun.b)ln.bold=false;if(tn==='blue')ln.tone='blue';s.rites.push(ln);continue}
-    const ln=blankLine('pre',markedText(l.runs,tn));if(tn&&tn!=='red')ln.tone=tn;if(mostlyBold(l.runs))ln.bold=true;s.rites.push(ln);
-  }
-  // 注意事項欄
-  for(const l of nc){
-    const t=l.text,tn=dominantTone(l.runs);
-    if(/^先遣\s*[:：]/.test(t)){const names=t.replace(/^先遣\s*[:：]\s*/,'').split(/[、，,]/).map(x=>x.trim()).filter(Boolean);s.advancePhone=PHONE.test(names[0]||'');s.advance=names.map(n=>n.replace(PHONE,'').trim()).filter(Boolean);names.forEach(n=>{const ph=(n.match(PHONE)||[''])[0].trim(),nm=n.replace(PHONE,'').trim();if(ph&&nm&&!DB.advance.some(a=>a.name===nm)){DB.advance.push({name:nm,phone:ph});newAdvance.add(nm)}});continue}
-    if(/值班副站長/.test(t)){s.deputyOn=true;continue}
-    if(/^※/.test(t)){const ln=blankLine('note',markedText(l.runs,tn).replace(/^※\s*/,''));ln.tone=tn==='red'?'':tn==='blue'?'blue':tn==='green'?'green':'black';s.notes.push(ln);continue}
-    if(tn==='green'){s.notes.push(blankLine('contact',t));continue}
-    const ln=blankLine('pre',markedText(l.runs,tn));if(tn)ln.tone=tn;if(mostlyBold(l.runs)&&tn!=='red')ln.bold=true;if(!mostlyBold(l.runs)&&tn==='red')ln.bold=false;s.notes.push(ln);
-  }
-  return s;
-}
-async function importWord(file){
-  const zip=await readZip(await file.arrayBuffer()),doc=new DOMParser().parseFromString(await zip.text('word/document.xml'),'application/xml');
-  if(doc.getElementsByTagName('parsererror').length)throw Error('Word 內容無法解析');
-  const table=Array.from(doc.getElementsByTagNameNS(W,'tbl')).find(t=>{const tr=kids(t,'tr')[0];return tr&&/會勘/.test(tr.textContent)});
-  if(!table)throw Error('找不到「勤務會勘紀錄表」表格（第一列需含「會勘」字樣）');
-  return parseSurveyTable(kids(table,'tr'));
-}
-$('importWordBtn').onclick=()=>$('wordFile').click();
-$('wordFile').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{newAdvance.clear();const {state:next,warn}=await importWord(f);if(newAdvance.size){saveDB();warn.push('先遣人員 '+[...newAdvance].join('、')+' 已加入資料庫')}const go=()=>{pushUndo();state=next;selected=state.stops[0]?.id||'global';render();persist();notify(`已匯入「${f.name}」：${state.stops.length} 個場所${warn.length?'（'+warn.join('、')+'）':''}`)};if(state.stops.length)ask('以 Word 內容取代目前紀錄？',`「${f.name}」共 ${next.stops.length} 個場所。目前內容會被取代（可按「復原」還原）。`,go,'匯入');else go()}catch(err){notify('匯入失敗：'+err.message)}});
 
 // ── JSON ──
 async function saveJson(){
@@ -1429,7 +1315,7 @@ function dbRender(){
     c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
     const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
-    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('contactRoles','聯絡人稱謂')}${box('prepLabels','勤前時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
+    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('contactRoles','聯絡人稱謂')}${box('prepLabels','場部時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
   }else{
     c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
@@ -1519,6 +1405,6 @@ $('cloudBtn').onclick=()=>{$('cloudToken').value=cloudCfg.token||'';$('cloudRepo
 
 // ── 啟動 ──
 cloudStoreCfg();renderDatalists();render();
-if(!state.stops.length&&!ls.get(KEY.data))notify('可按「匯入舊 Word」讀入以前的會勘紀錄表，或按「載入示範」看看完整範例');
+if(!state.stops.length&&!ls.get(KEY.data))notify('可按「載入示範」看看完整範例');
 
 </script></body></html>
