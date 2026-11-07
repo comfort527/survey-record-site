@@ -479,6 +479,14 @@ const DEFAULT_DB={
 };
 
 const IMPORTED_HSR_NAMES=["高鐵南港站","高鐵臺北站","高鐵板橋站","高鐵桃園站","高鐵新竹站","高鐵苗栗站","高鐵臺中站","高鐵彰化站","高鐵雲林站","高鐵嘉義站","高鐵臺南站","高鐵左營站"];
+// 各高鐵站預備的房間（依勤務申請編輯器的分區規則；臺北、左營維持既有「高鐵站貴賓室」）
+const HSR_ROOMS={'高鐵臺北站':'高鐵站貴賓室','高鐵苗栗站':'高鐵警察辦公室','高鐵臺中站':'高鐵站貴賓室','高鐵彰化站':'高鐵警察辦公室','高鐵雲林站':'高鐵警察辦公室','高鐵嘉義站':'高鐵會議室','高鐵臺南站':'高鐵會議室','高鐵左營站':'高鐵站貴賓室'};
+// 只補儀節還空著的高鐵站，已填寫的內容不覆蓋
+function importHsrRooms(db){
+  if(db.hsrRoomsRevision>=1)return db;
+  for(const [name,room] of Object.entries(HSR_ROOMS)){const p=db.places.find(x=>canon(x.name)===canon(name));if(p&&!p.rites.some(l=>l.text.trim()))p.rites=[{id:uid(),kind:'note',text:`備「${room}」`,tone:'',bold:null}]}
+  db.hsrRoomsRevision=1;return db;
+}
 function importHsrNames(db){
   if(db.hsrNamesRevision>=1)return db;
   const names=new Set(db.places.map(p=>canon(p.name)));
@@ -507,7 +515,7 @@ function normalizeTransportLibrary(db){
 }
 function normalizeDB(raw){
   const d=clone(DEFAULT_DB);d.places=d.places.map(normalizePlace);
-  if(!raw||typeof raw!=='object')return normalizeTransportLibrary(importHsrNames(d));
+  if(!raw||typeof raw!=='object')return importHsrRooms(normalizeTransportLibrary(importHsrNames(d)));
   const strs=v=>Array.isArray(v)?v.map(x=>String(x??'').trim()).filter(Boolean):null;
   for(const k of ['members','residence','escorts','regions','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
   if(Array.isArray(raw.advance))d.advance=raw.advance.filter(a=>a&&String(a.name||'').trim()).map(a=>({name:String(a.name).trim(),phone:String(a.phone||'').trim()}));
@@ -517,10 +525,10 @@ function normalizeDB(raw){
   d.escorts=[...new Set([...d.escorts,d.settings.escort].filter(Boolean))];
   if(Array.isArray(raw.places))d.places=raw.places.filter(p=>p&&String(p.name||'').trim()).map(normalizePlace);
   d.history=Array.isArray(raw.history)?raw.history.map(normalizeHistoryRecord).filter(Boolean):[];
-  d.hsrNamesRevision=Number(raw.hsrNamesRevision)||0;d.transportPlacesRevision=Number(raw.transportPlacesRevision)||0;d.commonPlacesRevision=Number(raw.commonPlacesRevision)||0;d.commonRailRevision=Number(raw.commonRailRevision)||0;
-  return normalizeTransportLibrary(importHsrNames(d));
+  d.hsrNamesRevision=Number(raw.hsrNamesRevision)||0;d.transportPlacesRevision=Number(raw.transportPlacesRevision)||0;d.commonPlacesRevision=Number(raw.commonPlacesRevision)||0;d.commonRailRevision=Number(raw.commonRailRevision)||0;d.hsrRoomsRevision=Number(raw.hsrRoomsRevision)||0;
+  return importHsrRooms(normalizeTransportLibrary(importHsrNames(d)));
 }
-let DB=(()=>{let raw=EMBEDDED.database;try{const s=ls.get(KEY.db);if(s)raw=JSON.parse(s)}catch{}const db=normalizeDB(raw);if(!(Number(raw?.hsrNamesRevision)>=1)||!(Number(raw?.transportPlacesRevision)>=1)||!(Number(raw?.commonPlacesRevision)>=1)||!(Number(raw?.commonRailRevision)>=1))ls.set(KEY.db,JSON.stringify(db));return db})();
+let DB=(()=>{let raw=EMBEDDED.database;try{const s=ls.get(KEY.db);if(s)raw=JSON.parse(s)}catch{}const db=normalizeDB(raw);if(!(Number(raw?.hsrNamesRevision)>=1)||!(Number(raw?.transportPlacesRevision)>=1)||!(Number(raw?.commonPlacesRevision)>=1)||!(Number(raw?.commonRailRevision)>=1)||!(Number(raw?.hsrRoomsRevision)>=1))ls.set(KEY.db,JSON.stringify(db));return db})();
 function saveDB(){if(!ls.set(KEY.db,JSON.stringify(DB)))notify('資料庫暫存失敗，請先備份資料庫');renderDatalists()}
 const prepLead=()=>{const n=Number(DB.settings.prepLead);return Number.isFinite(n)&&n>=0?n:15};
 const findPlace=name=>{if(!name)return null;const key=canon(transportPlaceName(name)||name),p=DB.places.find(p=>canon(p.name)===key);if(p)return p;const r=DB.history.filter(r=>canon(transportPlaceName(r.name)||r.name)===key).sort((a,b)=>b.date.localeCompare(a.date))[0];return r?normalizePlace({...r.stop,name:r.name,city:r.city}):null};
