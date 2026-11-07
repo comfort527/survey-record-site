@@ -606,7 +606,7 @@ const timeValid=t=>/^([01]\d|2[0-3])[0-5]\d$/.test(t||'');
 function addMin(t,delta){if(!timeValid(t))return '';let m=Number(t.slice(0,2))*60+Number(t.slice(2))+delta;m=((m%1440)+1440)%1440;return pad2(Math.floor(m/60))+pad2(m%60)}
 const minutesOf=v=>{const s=normDigits(v).trim();return /^\d{1,4}$/.test(s)?Number(s):null};
 function pairOf(i){const s=state.stops[i],p=state.stops[i-1];if(!p)return null;if(s.type==='hsr_arrive'&&p.type==='hsr_depart')return p;if(s.type==='air_arrive'&&p.type==='air_depart')return p;return null}
-function departOf(){const f=state.stops[0];if(f&&!isArriveType(f)&&timeValid(f.arrive)&&minutesOf(f.legMinutes)!==null)return addMin(f.arrive,-minutesOf(f.legMinutes));return ''}
+function departOf(){const g=state.global;if(timeValid(g.depart))return g.depart;const f=state.stops[0];if(f&&!isArriveType(f)&&timeValid(f.arrive)&&minutesOf(f.legMinutes)!==null)return addMin(f.arrive,-minutesOf(f.legMinutes));return ''}
 function prepOf(){const d=departOf();return timeValid(d)?addMin(d,-prepLead()):''}
 // 依前一站離開時間與車行（或高鐵、飛行）時間推算的到達時間
 function autoArrive(i){
@@ -622,7 +622,7 @@ function leaveOf(i){const s=state.stops[i];return s.depart||arriveOf(i)}
 function arrivalFor(i){const p=state.stops[i],a=state.stops[i+1];return a&&((p.type==='hsr_depart'&&a.type==='hsr_arrive')||(p.type==='air_depart'&&a.type==='air_arrive'))?a:null}
 function flightDuration(i){const s=state.stops[i],a=s.type==='air_arrive'?s:arrivalFor(i),p=s.type==='air_arrive'?pairOf(i):s;if(!a||!p)return '';const ai=state.stops.indexOf(a),pi=state.stops.indexOf(p),from=leaveOf(pi),to=arriveOf(ai);if(timeValid(from)&&timeValid(to)){const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));return String((min(to)-min(from)+1440)%1440)}return a.flightMinutes||''}
 function syncTravelEstimates(){
-  const g=state.global,n=state.stops.length;if(n&&timeValid(g.returnAt)&&timeValid(leaveOf(n-1))){const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));g.returnMinutes=String((min(g.returnAt)-min(leaveOf(n-1))+1440)%1440)}
+  const g=state.global,n=state.stops.length,f=state.stops[0];if(f&&!isArriveType(f)&&f.legMode!=='none'&&timeValid(g.depart)&&timeValid(f.arrive)){const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));f.legMinutes=String((min(f.arrive)-min(g.depart)+1440)%1440)}if(n&&timeValid(g.returnAt)&&timeValid(leaveOf(n-1))){const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));g.returnMinutes=String((min(g.returnAt)-min(leaveOf(n-1))+1440)%1440)}
   for(let i=1;i<state.stops.length;i++){const s=state.stops[i];if(isArriveType(s)||s.legMode==='none'||!timeValid(s.arrive))continue;const from=leaveOf(i-1);if(!timeValid(from))continue;const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));s.legMinutes=String((min(s.arrive)-min(from)+1440)%1440)}
 }
 function returnTimeOf(){if(timeValid(state.global.returnAt))return state.global.returnAt;const n=state.stops.length;if(!n)return '';const t=leaveOf(n-1),m=minutesOf(state.global.returnMinutes);return timeValid(t)&&m!==null?addMin(t,m):''}
@@ -793,7 +793,7 @@ function transportText(s,i=state.stops.indexOf(s)){const p=pairOf(i),air=s.type=
 function legChipText(i){const s=state.stops[i];if(!pairOf(i))return '⚠ 前一筆應為對應的出發站';const from=leaveOf(i-1)||'？',to=arriveOf(i)||'？';if(s.type==='air_arrive'){const name=String(s.airline||'').trim()+(s.flightNo?'-'+s.flightNo:''),m=flightDuration(i);return esc(`飛行 ${name?name+' ':''}${from}→${to}${m?`（${m} 分）`:''}`)}return esc(`高鐵 ${s.trainNo||'？'}車次 ${from}→${to}`)}
 function listRender(){
   const g=state.global,st=state.stops;
-  let h=`<div class="stop ${selected==='global'?'selected':''}" data-select="global"><div class="top"><span>文件設定</span><span>出發</span></div><div class="itinerary-place-time"><input class="sidebar-place-input" data-side="origin" value="${esc(g.origin)}" placeholder="出發場所" list="placeList" aria-label="出發場所"><input class="sidebar-time-input auto" data-side="depart" readonly value="${esc(departOf())}" placeholder="離開" aria-label="自動反推離開時間"></div></div>`;
+  let h=`<div class="stop ${selected==='global'?'selected':''}" data-select="global"><div class="top"><span>文件設定</span><span>出發</span></div><div class="itinerary-place-time"><input class="sidebar-place-input" data-side="origin" value="${esc(g.origin)}" placeholder="出發場所" list="placeList" aria-label="出發場所"><input class="sidebar-time-input" data-side="depart" value="${esc(departOf())}" placeholder="離開" inputmode="numeric" maxlength="4" aria-label="離開時間"></div></div>`;
   st.forEach((s,i)=>{
     h+=legChip(i);
     h+=`<div class="itinerary-list-item compact-itinerary type-${s.type} ${selected===s.id?'selected':''}" data-select="${s.id}" data-drag-stop="${s.id}"><div class="itinerary-first-row" data-drag-handle title="拖曳調整順序"><div class="itinerary-code"><span>${pad2(i+1)} · ${esc(TYPES[s.type])}</span></div><div class="itinerary-move"><button type="button" class="small" data-stop-move="up" data-stop-id="${s.id}" ${i===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-stop-move="down" data-stop-id="${s.id}" ${i===st.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-stop-delete="${s.id}" aria-label="刪除" title="刪除">×</button></div></div><div class="itinerary-place-time"><input class="sidebar-place-input" data-side-place="${esc(s.id)}" value="${esc(s.place)}" placeholder="場所名稱" aria-label="行程 ${i+1} 場所名稱" autocomplete="off"><input class="sidebar-time-input ${timeMismatch(i)?'warn':''}" data-side-time="${s.id}" value="${esc(sideTimeValue(s))}" placeholder="${esc(sideTimePlaceholder(i))}" maxlength="9" aria-label="抵離時間" title="${esc(timeMismatch(i)?'與推算抵達 '+timeMismatch(i)+' 不符':'抵離時間，例如 1000-1050')}"></div></div>`;
@@ -834,7 +834,7 @@ function editorGlobal(){
     <div class="block basic-block">
       <div class="grid-5"><div class="field"><span>地區</span><details class="region-picker"><summary>${esc(regions.join('、')||'選擇地區')}</summary><div class="region-options">${regionOptions.map(name=>`<label class="toggle"><input type="checkbox" data-weather-region="${esc(name)}" ${regions.includes(name)?'checked':''}>${esc(name)}</label>`).join('')}</div></details></div><label class="field"><span>氣溫（度）</span><input data-range="temp" value="${esc(tempText(g))}" placeholder="18-20" inputmode="numeric" maxlength="5" autocomplete="off"></label>${field('g.rain','降雨（%）',g.rain,{ph:'0'})}${field('g.attire','服裝',g.attire,{list:'attireList',ph:'勤務衫'})}${selectEl('g.escort',`隨行 ${toggleEl('g.escortOn','列出',g.escortOn)}`,g.escort,escortOptions)}</div>
     </div>
-    <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-2">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}</div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
+    <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-3">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}<label class="field"><span>離開時間</span><input data-side="depart" value="${esc(departOf())}" placeholder="0900" inputmode="numeric" maxlength="4" autocomplete="off"></label></div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
   </div><div class="editor-side">
     <div class="block unit-section"><div class="block-title"><h3>本隊</h3><span class="count">${g.crew.length} 人 · 依資料庫順序輸出</span></div><div class="chip-grid">${chips(g.crew,'crew',DB.members)}</div><div class="add-inline"><input data-add-person="crew" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
     <div class="block contact-section"><div class="block-title"><h3>寓所</h3><span class="count">${g.residence.length} 人</span></div><div class="chip-grid">${chips(g.residence,'residence',DB.residence)}</div><div class="add-inline"><input data-add-person="residence" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
@@ -894,13 +894,13 @@ function setRailSeat(s,key,name,checked){
   sanitizeRailSeats(s);s.railSeatsOn=true;
 }
 function railSeatingLines(s){sanitizeRailSeats(s);return s.type==='hsr_depart'&&s.railSeatsOn?['6 車：'+RAIL_CAR6_PEOPLE.map(([name,key])=>name+String(s[key]||'').trim()).join('、'),...(s.railCar5On===false?[]:['5 車：'+railPassengerText(s,'railSeats5')]),...(s.railCar7On===false?[]:['7 車：'+railPassengerText(s,'railSeats7')])]:[]}
-// 5、7 車人員選項：本日本隊人員去姓、排除不列入者；已排入另一車的人不再列出
+// 5、7 車人員選項：本日本隊人員與本站先遣，去姓、排除不列入者；已排入另一車的人不再列出
 const seatTokens=t=>String(t||'').split(/[、，,]/).map(x=>x.trim()).filter(Boolean);
-function railPickPeople(){return [...new Set(state.global.crew)].filter(n=>!RAIL_SEAT_EXCLUDED.has(n)).map(n=>railSeatLabel(n)).filter(Boolean)}
+function railPickPeople(s){return [...new Set([...state.global.crew,...(s?.advance||[])])].filter(n=>!RAIL_SEAT_EXCLUDED.has(n)).map(n=>railSeatLabel(n)).filter((l,i,a)=>l&&a.indexOf(l)===i)}
 function railPicksMarkup(s,key){
   const other=key==='railSeats5'?'railSeats7':'railSeats5',mine=railPassengerText(s,key),theirs=s[railCarFlag(other)]===false?'':railPassengerText(s,other);
-  const people=railPickPeople().filter(l=>!theirs.includes(l));
-  if(!state.global.crew.length)return `<div class="rail-pick" data-rail-picks="${key}"><span class="hint">先在「文件設定」選本隊人員，這裡會列出可選的人</span></div>`;
+  const all=railPickPeople(s),people=all.filter(l=>!theirs.includes(l));
+  if(!all.length)return `<div class="rail-pick" data-rail-picks="${key}"><span class="hint">先在「文件設定」選本隊人員，或在本站勾選先遣，這裡會列出可選的人</span></div>`;
   return `<div class="rail-pick" data-rail-picks="${key}">${people.map(l=>`<button type="button" class="chip ${mine.includes(l)?'on':''}" data-rail-pick="${key}" data-label="${esc(l)}">${esc(l)}</button>`).join('')||'<span class="hint">本隊人員都已排入另一車</span>'}</div>`;
 }
 function refreshRailPicks(s){for(const el of $('editor').querySelectorAll('[data-rail-picks]'))el.outerHTML=railPicksMarkup(s,el.dataset.railPicks)}
@@ -975,6 +975,7 @@ function syncInputs(){
     else if('returnAt' in el.dataset)el.value=returnTimeOf();
     else if('returnTo' in el.dataset)el.value=g.returnTo;
   }
+  for(const el of $('editor').querySelectorAll('[data-side="depart"]'))if(el!==act)el.value=departOf();
   for(const el of $('stopList').querySelectorAll('[data-side-time]')){const i=state.stops.findIndex(s=>s.id===el.dataset.sideTime);if(i<0)continue;el.placeholder=sideTimePlaceholder(i);const mm=timeMismatch(i);el.classList.toggle('warn',!!mm);el.title=mm?'與推算抵達 '+mm+' 不符':'抵離時間，例如 1000-1050'}
   for(const el of $('stopList').querySelectorAll('[data-derived-chip]')){const i=state.stops.findIndex(s=>s.id===el.dataset.derivedChip);if(i>=0)el.innerHTML=legChipText(i)}
   for(const el of document.querySelectorAll('[data-arrival-transport]')){const s=stopById(el.dataset.arrivalTransport);if(s)el.textContent=transportText(s)||'未填航空公司與航班（Word 不列出）'}
@@ -1037,6 +1038,7 @@ const digitsOnly=(el,max=4)=>{const v=normDigits(el.value).replace(/\D/g,'').sli
 $('stopList').addEventListener('input',e=>{
   const el=e.target,g=state.global;maybeUndo(el);
   if(el.dataset.side==='origin')g.origin=el.value;
+  else if(el.dataset.side==='depart')g.depart=digitsOnly(el);
   else if(el.dataset.sidePlace){const s=stopById(el.dataset.sidePlace);if(!s)return;if(selected!==s.id)selectStop(s.id,{scroll:false});s.place=el.value}
   else if(el.dataset.sideTime){const s=stopById(el.dataset.sideTime);if(!s)return;const v=normRange(el.value);if(v!==el.value)el.value=v;parseSideTime(s,v)}
   else if('returnAt' in el.dataset)g.returnAt=digitsOnly(el);
@@ -1070,6 +1072,7 @@ $('stopList').addEventListener('dragend',()=>{dragId=null;for(const c of $('stop
 // 編輯區事件
 $('editor').addEventListener('input',e=>{
   const el=e.target;
+  if(el.dataset.side==='depart'){maybeUndo(el);state.global.depart=digitsOnly(el);afterEdit();return}
   if(el.dataset.railFree){const key=el.dataset.railFree,s=current();if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;maybeUndo(el);s[key]=[];el.value=el.value.toUpperCase();s[railCarNoteKey(key)]=el.value;s.railSeatsOn=true;const cb=$('editor').querySelector('[data-path="railSeatsOn"]');if(cb)cb.checked=true;afterEdit();refreshRailPicks(s);return}
   if(el.dataset.path&&el.type!=='checkbox'&&el.tagName!=='SELECT'){
     maybeUndo(el);const path=el.dataset.path,[obj,key]=targetOf(path);if(!obj)return;
