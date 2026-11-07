@@ -336,6 +336,8 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .rail-seat-row>span{white-space:nowrap}
 .block-title.title-with-input{justify-content:flex-start}
 .title-time-input{width:170px;font-size:18px;letter-spacing:.5px}
+.rail-pick{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px;padding-left:4px}
+.rail-pick .chip{font-size:15px;padding:2px 10px}
 </style>
 </head>
 <body data-mobile-view="list">
@@ -440,7 +442,8 @@ const ls={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v)
 const TRIP_TYPES={visit:'一般場所',hsr_depart:'高鐵／機場出發',hsr_arrive:'高鐵／機場抵達站'};
 const TYPES={...TRIP_TYPES,air_depart:TRIP_TYPES.hsr_depart,air_arrive:TRIP_TYPES.hsr_arrive};
 const RAIL_CAR6_PEOPLE=[['永和','railSeat6Yonghe'],['泰安','railSeat6Taian'],['座官','railSeat6Officer'],['幹部','railSeat6Cadre']];
-const RAIL_SEAT_EXCLUDED=new Set([]);
+// 5、7 車選單不列入的人員（存在資料庫「人員」分頁，可同步雲端）
+const RAIL_SEAT_EXCLUDED={has:n=>(typeof DB==='undefined'?[]:DB.seatExcluded||[]).includes(n)};
 const CITIES=['臺北市','新北市','桃園市','臺中市','臺南市','高雄市','基隆市','新竹市','嘉義市','宜蘭縣','新竹縣','苗栗縣','彰化縣','南投縣','雲林縣','嘉義縣','屏東縣','臺東縣','花蓮縣','澎湖縣','金門縣','連江縣'];
 const COMMON_PLACE_NAMES=['敦南寓所','公保大樓','陽明寓所'];
 const AIRPORT_PLACES=[{name:'松山機場',city:'臺北市',aliases:['松山軍用機場','臺北松山機場','台北松山機場']},{name:'台東機場',city:'臺東縣',aliases:['臺東機場']},{name:'澎湖機場',city:'澎湖縣',aliases:[]}];
@@ -463,6 +466,7 @@ const DEFAULT_DB={
   shortNames:[['敦南寓所','敦南'],['陽明寓所','陽明'],['公保大樓','公保']],
   members:[],
   residence:[],
+  seatExcluded:[],
   advance:[],
   hsr:{'高鐵南港站':'','高鐵臺北站':'','高鐵板橋站':'','高鐵桃園站':'','高鐵新竹站':'','高鐵苗栗站':'','高鐵臺中站':'','高鐵彰化站':'','高鐵雲林站':'','高鐵嘉義站':'','高鐵臺南站':'','高鐵左營站':''},
   regions:['台北','新北','桃園','新竹','苗栗','台中','彰化','南投','雲林','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','基隆','澎湖','金門'],
@@ -517,7 +521,7 @@ function normalizeDB(raw){
   const d=clone(DEFAULT_DB);d.places=d.places.map(normalizePlace);
   if(!raw||typeof raw!=='object')return importHsrRooms(normalizeTransportLibrary(importHsrNames(d)));
   const strs=v=>Array.isArray(v)?v.map(x=>String(x??'').trim()).filter(Boolean):null;
-  for(const k of ['members','residence','escorts','regions','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
+  for(const k of ['members','residence','seatExcluded','escorts','regions','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
   if(Array.isArray(raw.advance))d.advance=raw.advance.filter(a=>a&&String(a.name||'').trim()).map(a=>({name:String(a.name).trim(),phone:String(a.phone||'').trim()}));
   if(raw.hsr&&typeof raw.hsr==='object')d.hsr=Object.fromEntries(Object.entries({...d.hsr,...raw.hsr}).map(([k,v])=>[k,String(v??'')]));
   if(Array.isArray(raw.shortNames))d.shortNames=raw.shortNames.filter(p=>Array.isArray(p)&&p[0]).map(p=>[String(p[0]).trim(),String(p[1]||'').trim()]);
@@ -890,10 +894,25 @@ function setRailSeat(s,key,name,checked){
   sanitizeRailSeats(s);s.railSeatsOn=true;
 }
 function railSeatingLines(s){sanitizeRailSeats(s);return s.type==='hsr_depart'&&s.railSeatsOn?['6 車：'+RAIL_CAR6_PEOPLE.map(([name,key])=>name+String(s[key]||'').trim()).join('、'),...(s.railCar5On===false?[]:['5 車：'+railPassengerText(s,'railSeats5')]),...(s.railCar7On===false?[]:['7 車：'+railPassengerText(s,'railSeats7')])]:[]}
+// 5、7 車人員選項：本日本隊人員去姓、排除不列入者；已排入另一車的人不再列出
+const seatTokens=t=>String(t||'').split(/[、，,]/).map(x=>x.trim()).filter(Boolean);
+function railPickPeople(){return [...new Set(state.global.crew)].filter(n=>!RAIL_SEAT_EXCLUDED.has(n)).map(n=>railSeatLabel(n)).filter(Boolean)}
+function railPicksMarkup(s,key){
+  const other=key==='railSeats5'?'railSeats7':'railSeats5',mine=railPassengerText(s,key),theirs=s[railCarFlag(other)]===false?'':railPassengerText(s,other);
+  const people=railPickPeople().filter(l=>!theirs.includes(l));
+  if(!state.global.crew.length)return `<div class="rail-pick" data-rail-picks="${key}"><span class="hint">先在「文件設定」選本隊人員，這裡會列出可選的人</span></div>`;
+  return `<div class="rail-pick" data-rail-picks="${key}">${people.map(l=>`<button type="button" class="chip ${mine.includes(l)?'on':''}" data-rail-pick="${key}" data-label="${esc(l)}">${esc(l)}</button>`).join('')||'<span class="hint">本隊人員都已排入另一車</span>'}</div>`;
+}
+function refreshRailPicks(s){for(const el of $('editor').querySelectorAll('[data-rail-picks]'))el.outerHTML=railPicksMarkup(s,el.dataset.railPicks)}
+function toggleRailPick(s,key,label){
+  let tokens=seatTokens(railPassengerText(s,key));s[key]=[];
+  tokens=tokens.some(t=>t.includes(label))?tokens.filter(t=>!t.includes(label)):[...tokens,label];
+  s[railCarNoteKey(key)]=tokens.join('、');s[railCarFlag(key)]=true;s.railSeatsOn=true;
+}
 function railSeatingEditor(s){
   if(s.type!=='hsr_depart')return '';
   sanitizeRailSeats(s);
-  const row=(car,key)=>s[railCarFlag(key)]===false?`<button type="button" class="small" data-add-seat-car="${key}">＋ 加入 ${car} 車</button>`:`<div class="rail-seat-row"><span>${car} 車：</span><input data-rail-free="${key}" value="${esc(railPassengerText(s,key))}" placeholder="輸入人員、座位或備註" aria-label="${car} 車人員與座位" autocomplete="off"><button type="button" class="small danger rail-car-remove" data-remove-seat-car="${key}" aria-label="刪除 ${car} 車" title="刪除 ${car} 車">x</button></div>`;
+  const row=(car,key)=>s[railCarFlag(key)]===false?`<button type="button" class="small" data-add-seat-car="${key}">＋ 加入 ${car} 車</button>`:`<div class="rail-seat-row"><span>${car} 車：</span><input data-rail-free="${key}" value="${esc(railPassengerText(s,key))}" placeholder="輸入人員、座位或備註" aria-label="${car} 車人員與座位" autocomplete="off"><button type="button" class="small danger rail-car-remove" data-remove-seat-car="${key}" aria-label="刪除 ${car} 車" title="刪除 ${car} 車">x</button></div>${railPicksMarkup(s,key)}`;
   return `<div class="rail-seating"><div class="block-title"><h3>高鐵出發站車廂配置</h3>${toggleEl('railSeatsOn','列入儀節',s.railSeatsOn)}</div><div class="rail-fixed"><span>6 車：</span>${RAIL_CAR6_PEOPLE.map(([name,key])=>`<label class="rail-fixed-person">${name}<input class="rail-seat-number" data-path="${key}" value="${esc(s[key]||'')}" aria-label="${name}座位" placeholder="座位" maxlength="12" autocomplete="off"></label>`).join('')}</div>${row('5','railSeats5')}${row('7','railSeats7')}</div>`;
 }
 function refreshRailSeatingEditor(s){const block=$('editor').querySelector('.rail-seating');if(!block)return;const opened=[...block.querySelectorAll('details[open][data-seat-picker]')].map(el=>el.dataset.seatPicker);block.outerHTML=railSeatingEditor(s);for(const key of opened){const picker=$('editor').querySelector(`[data-seat-picker="${key}"]`);if(picker)picker.open=true}}
@@ -1051,7 +1070,7 @@ $('stopList').addEventListener('dragend',()=>{dragId=null;for(const c of $('stop
 // 編輯區事件
 $('editor').addEventListener('input',e=>{
   const el=e.target;
-  if(el.dataset.railFree){const key=el.dataset.railFree,s=current();if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;maybeUndo(el);s[key]=[];el.value=el.value.toUpperCase();s[railCarNoteKey(key)]=el.value;s.railSeatsOn=true;const cb=$('editor').querySelector('[data-path="railSeatsOn"]');if(cb)cb.checked=true;afterEdit();return}
+  if(el.dataset.railFree){const key=el.dataset.railFree,s=current();if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;maybeUndo(el);s[key]=[];el.value=el.value.toUpperCase();s[railCarNoteKey(key)]=el.value;s.railSeatsOn=true;const cb=$('editor').querySelector('[data-path="railSeatsOn"]');if(cb)cb.checked=true;afterEdit();refreshRailPicks(s);return}
   if(el.dataset.path&&el.type!=='checkbox'&&el.tagName!=='SELECT'){
     maybeUndo(el);const path=el.dataset.path,[obj,key]=targetOf(path);if(!obj)return;
     let v=el.value;if(path.startsWith('railSeat6')){v=v.toUpperCase();el.value=v}if(TIME_PATHS.has(path))v=digitsOnly(el,4);else if(NUM_PATHS.has(path))v=digitsOnly(el,5);
@@ -1111,6 +1130,7 @@ let lastLineField=null;
 $('editor').addEventListener('focusin',e=>{if(e.target.dataset.lineText)lastLineField=e.target});
 $('editor').addEventListener('click',e=>{
   const s=current(),b=e.target.closest('button');if(!b)return;
+  if(b.dataset.railPick){const key=b.dataset.railPick;if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;pushUndo();toggleRailPick(s,key,b.dataset.label);refreshRailSeatingEditor(s);afterEdit();const inp=$('editor').querySelector(`[data-rail-free="${key}"]`);if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}return}
   if(b.dataset.removeSeatCar||b.dataset.addSeatCar){const key=b.dataset.removeSeatCar||b.dataset.addSeatCar;if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;pushUndo();setRailCar(s,key,!!b.dataset.addSeatCar);refreshRailSeatingEditor(s);afterEdit();return}
   if(b.dataset.chip){pushUndo();const name=b.dataset.name,key=b.dataset.chip;
     if(key==='advance'){const k=s.advance.indexOf(name);if(k>=0)s.advance.splice(k,1);else s.advance.push(name)}
@@ -1319,7 +1339,7 @@ function dbRender(){
   }else if(dbTab==='history'){
     c.innerHTML=historyMarkup();
   }else if(dbTab==='people'){
-    c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
+    c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
     const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
     c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('contactRoles','聯絡人稱謂')}${box('prepLabels','場部時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
