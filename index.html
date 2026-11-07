@@ -855,13 +855,13 @@ function expectTip(i){
   return '<div data-derived="expect" hidden></div>';
 }
 // 場部時間按鈕：已加入的不再出現；「場部」「中心開設」單獨使用，選了其中之一其他全部隱藏；
-// 選了場檢、部署、重點、全員任一項，就不再提供「場部」「中心開設」
+// 選了場檢、部署、重點、全員任一項，就不再提供「場部」「中心開設」；選了「重點」就不再提供「部署」
 const PREP_SOLO=['場部','中心開設','依中心勤務命令辦理'];
 function prepButtons(s){
   const used=s.prepTimes.map(p=>p.label.trim()).filter(Boolean);
   if(used.some(l=>PREP_SOLO.includes(l)))return '';
   const groupUsed=used.length>0;
-  return [...new Set([...DB.prepLabels,'中心開設'])].filter(l=>!used.includes(l)&&!(groupUsed&&PREP_SOLO.includes(l))).map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('');
+  return [...new Set([...DB.prepLabels,'中心開設'])].filter(l=>!used.includes(l)&&!(groupUsed&&PREP_SOLO.includes(l))&&!(l==='部署'&&used.includes('重點'))).map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('');
 }
 function editorStop(s,i){
   const legField='';
