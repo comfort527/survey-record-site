@@ -727,7 +727,9 @@ function placeCell(i){
 function ritesCell(i){
   const s=state.stops[i],ps=[];let n=0,prev=null;const LH=s.type==='hsr_depart'?280:320;// 高鐵出發站行高 14pt
   for(const text of railSeatingLines(s))ps.push(P([R(text)],{jc:'both',line:LH}));
-  for(const l of s.rites){
+  // 儀節輸入框內的換行只供編輯閱讀，輸出時一律接成一行
+  for(const l0 of s.rites){
+    const l={...l0,text:String(l0.text).replace(/[ \t]*\n[ \t]*/g,'')};
     if(!l.text.trim())continue;
     const c=lineColor('rites',l),b=lineBold('rites',l),gap=prev==='pre'&&l.kind!=='pre'?1:0;
     if(l.kind==='step'){n++;ps.push(P([R(n+'.',b,c),...richRuns(l.text,{b,c},{parenPlain:true})],{jc:'both',line:LH,gap,hang:240}))}
