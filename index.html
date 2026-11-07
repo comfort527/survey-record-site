@@ -58,7 +58,8 @@ aside{padding:12px 13px;background:#eef3f6;border-right:1px solid var(--line);ov
 .splitter{position:relative;background:#e4ecee;cursor:row-resize;touch-action:none;outline:none}
 .splitter:before{content:'';position:absolute;left:calc(50% - 32px);top:3px;width:64px;height:4px;border-radius:3px;background:#a4b9be}
 .splitter:hover,.splitter:focus-visible{background:#c6e3e0}
-body.preview-hidden .main-col{grid-template-rows:1fr 0 auto}
+body.preview-hidden .main-col{grid-template-rows:minmax(0,1fr) 0 50px}
+.main-col>.editor{grid-row:1}.main-col>.splitter{grid-row:2}.main-col>.preview-pane{grid-row:3}
 body.preview-hidden .preview-body,body.preview-hidden .splitter,body.preview-hidden #previewExpand,body.preview-hidden #previewFull,body.preview-hidden #previewScope,body.preview-hidden #previewZoom,body.preview-hidden .preview-toolbar .count{display:none}
 body.preview-hidden .preview-pane{overflow:hidden;padding-top:6px;padding-bottom:6px}
 body.preview-hidden .preview-toolbar{margin-bottom:0}
@@ -258,7 +259,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .mobile-nav,.mobile-bottom{display:none}
 
 /* ── 中尺寸 ── */
-@media(max-width:1400px){.editor-columns{grid-template-columns:1fr}}
+@media(max-width:1200px){.editor-columns{display:flex;flex-direction:column;gap:10px}.editor-columns>.editor-main,.editor-columns>.editor-side{display:contents}.editor-main>.basic-single-row{order:1}.editor-main>.transport-inline-block{order:2}.editor-main>.place-card{order:3}.editor-main>.time-section{order:4}.editor-main>.contact-section{order:5}.editor-side>.unit-section{order:6}.editor-main>.notes-section{order:7}}
 @media(min-width:1401px){.basic-single-row{width:calc((100% - 12px) / 2.15)}}
 @media(max-width:1000px){
   .workspace{grid-template-columns:290px minmax(0,1fr)}
@@ -373,6 +374,14 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .contact-section.is-collapsed .adv-summary{display:block}
 .item-list-title>h3.adv-toggle{margin-right:0}
 .contact-section:not(.is-collapsed) .adv-toggle{margin-right:auto}
+.notes-toggle:before{color:#b0645c}
+.notes-section.is-collapsed .notes-toggle:before{content:'▸ '}
+.notes-section.is-collapsed .notes-body,.notes-section.is-collapsed .item-list-title>button{display:none}
+.notes-section.is-collapsed>.item-list-title{margin-bottom:0}
+.notes-summary{flex:1;min-width:0;font-size:15px;color:#8a4b45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
+.notes-section.is-collapsed .notes-summary{display:block}
+.notes-section:not(.is-collapsed) .notes-toggle{margin-right:auto}
+.item-list-title>h3.notes-toggle{margin-right:0}
 </style>
 </head>
 <body data-mobile-view="list">
@@ -894,7 +903,9 @@ function prepButtons(s){
   return PREP_LABELS.filter(l=>!used.includes(l)&&!(groupUsed&&PREP_SOLO.includes(l))&&!(l==='部署'&&used.includes('重點'))).map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('');
 }
 // 地點卡片預設收合；展開狀態在重畫編輯區時保留
-let placeCardOpen=false,timeCardOpen=true,advCardOpen=true;
+let placeCardOpen=false,timeCardOpen=true,advCardOpen=true,notesCardOpen=true;
+const notesSummary=s=>{const items=s.notes.filter(l=>l.kind!=='contact'&&l.text.trim()),red=items.filter(l=>l.kind==='note'&&lineColor('notes',l)==='red').length;return items.length?`${items.length} 項${red?`（待確認 ${red}）`:''}`:'未填'};
+function toggleNotesCard(){notesCardOpen=!notesCardOpen;const b=$('editor').querySelector('.notes-section');if(b){b.classList.toggle('is-collapsed',!notesCardOpen);b.querySelector('[data-toggle-notes]')?.setAttribute('aria-expanded',String(notesCardOpen))}}
 const advSummary=s=>{const n=s.advance.map(railSeatLabel).join('、'),c=s.notes.filter(l=>l.kind==='contact'&&l.text.trim()).length;return [n,c?`聯絡人 ${c}`:''].filter(Boolean).join(' · ')||'未選'};
 function toggleAdvCard(){advCardOpen=!advCardOpen;const b=$('editor').querySelector('.contact-section');if(b){b.classList.toggle('is-collapsed',!advCardOpen);b.querySelector('[data-toggle-adv]')?.setAttribute('aria-expanded',String(advCardOpen))}}
 // 收合摘要：場檢→場、部署→部、重點→重、全員→全；場部、中心開設維持全名；例如「場0830重0900全1000」
@@ -928,10 +939,10 @@ function editorStop(s,i){
       <div class="tool-row">${prepButtons(s)}</div>
       </div>
     </div>
-  </div><div class="editor-side">
     <div class="block contact-section ${advCardOpen?'':'is-collapsed'}">${advanceEditor(s)}<div class="adv-body-tail">${s.type==='hsr_depart'?'':lineEditor(s,'notes',{only:'contact'})}</div></div>
+    ${s.type==='hsr_depart'?'':`<div class="block notes-section ${notesCardOpen?'':'is-collapsed'}">${lineEditor(s,'notes')}</div>`}
+  </div><div class="editor-side">
     <div class="block unit-section">${railSeatingEditor(s)}${s.type==='hsr_depart'?'':lineEditor(s,'rites')}</div>
-    ${s.type==='hsr_depart'?'':`<div class="block notes-section">${lineEditor(s,'notes')}</div>`}
   </div></div>`;
 }
 function railSeatLabel(name){const chars=[...String(name).trim()];return chars.length>1?chars.slice(1).join(''):chars.join('')}
@@ -984,13 +995,16 @@ function lineEditor(s,key,opt={}){
   const contact=opt.only==='contact',scope=key==='notes'?(contact?'contact':'other'):'';
   const rows=s[key].map((l,i)=>[l,i]).filter(([l])=>key!=='notes'||(contact?l.kind==='contact':l.kind!=='contact'));let n=0;
   const title=contact?'聯絡人':key==='rites'?'儀節':'注意事項';
-  let h=contact?`<div class="item-list-title contact-title"><h3>聯絡人</h3><button type="button" class="small" data-add-contact>＋ 聯絡人</button></div>`:`<div class="item-list-title"><h3>${title}</h3>${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
+  const notesMain=key==='notes'&&!contact;
+  let h=contact?`<div class="item-list-title contact-title"><h3>聯絡人</h3><button type="button" class="small" data-add-contact>＋ 聯絡人</button></div>`:`<div class="item-list-title">${notesMain?`<h3 class="card-toggle notes-toggle" data-toggle-notes role="button" tabindex="0" aria-expanded="${notesCardOpen}">${title}</h3><span class="notes-summary">${esc(notesSummary(s))}</span>`:`<h3>${title}</h3>`}${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
+  if(notesMain)h+='<div class="notes-body">';
   if(!contact)h+=`<div class="phrase-row">${(key==='rites'?DB.ritePhrases:DB.notePhrases).map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}</div>`;
   h+=rows.map(([l,i],k)=>{
     const tag=l.kind==='step'?(l.text.trim()?(++n)+'.':'#'):l.kind==='note'?'※':l.kind==='contact'?'聯絡':'說明',c=lineColor(key,l);
     return `<div class="line-row kind-${l.kind} tone-${c||'black'} ${lineBold(key,l)?'bold':''}" data-list="${key}" data-index="${i}" ${scope?`data-scope="${scope}"`:''}><button type="button" class="line-kind" data-line-act="kind" ${contact?'disabled':''} title="${contact?'聯絡人（綠字）':`切換類型：${LINE_KINDS[key].map(x=>x[1]).join('／')}`}">${tag}</button><textarea rows="1" data-line-text="${key}" data-index="${i}" aria-label="${title}第 ${k+1} 行" ${contact?'placeholder="例如：主辦王○○09xx-xxxxxx"':''}>${esc(l.text)}</textarea><div class="line-tools"><button type="button" class="small tone-btn" data-line-act="tone" title="切換顏色"><span class="tone-dot ${c||'black'}"></span>${toneLabel(key,l)}</button>${l.kind==='step'||l.kind==='pre'?`<button type="button" class="small bold-btn ${lineBold(key,l)?'on':''}" data-line-act="bold" title="粗體">粗</button>`:''}<button type="button" class="small" data-line-act="up" ${k===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-line-act="down" ${k===rows.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-line-act="del" aria-label="刪除">×</button></div></div>`;
   }).join('');
   if(!rows.length&&!contact)h+=`<p class="empty-hint">${key==='rites'?'按「＋ 步驟」或點選上方片語開始；可直接貼上整段文字，會自動分行。':'按「＋ ※」新增待確認事項；確認後點「待確認」改為「已確認」（藍字）。'}</p>`;
+  if(notesMain)h+='</div>';
   return h;
 }
 function autoGrow(t){t.style.height='auto';t.style.height=Math.max(36,t.scrollHeight+2)+'px'}
@@ -1500,8 +1514,8 @@ $('cloudList').addEventListener('click',e=>{
 $('cloudFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;cloudRun('上傳 JSON',async()=>{await cloudLoadList();let n=0;for(const f of files){const text=await f.text();const d=JSON.parse(text);if(!Array.isArray(d?.stops))throw Error(f.name+' 不是會勘紀錄 JSON');const name=safeFileName(f.name.replace(/\.json$/i,''))+'.json',old=cloudFiles.find(x=>x.name===name);await cloudPut(CLOUD_DIR+'/'+name,text,'上傳會勘紀錄：'+name,old?.sha);n++}await cloudLoadList();cloudStatus(`已上傳 ${n} 個檔案`)})});
 $('cloudBtn').onclick=()=>{$('cloudToken').value=cloudCfg.token||'';$('cloudRepo').value=cloudCfg.repo||'comfort527/road-table-data';$('cloudSetup').open=!cloudReady();cloudStatus('');cloudRenderState();cloudListRender();$('cloudDialog').showModal();if(cloudReady())cloudRun('讀取雲端清單',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')})};
 
-$('editor').addEventListener('click',e=>{if(e.target.closest('[data-toggle-time]'))toggleTimeCard();if(e.target.closest('[data-toggle-adv]'))toggleAdvCard()});
-$('editor').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-time]')){e.preventDefault();toggleTimeCard()}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-adv]')){e.preventDefault();toggleAdvCard()}});
+$('editor').addEventListener('click',e=>{if(e.target.closest('[data-toggle-time]'))toggleTimeCard();if(e.target.closest('[data-toggle-adv]'))toggleAdvCard();if(e.target.closest('[data-toggle-notes]'))toggleNotesCard()});
+$('editor').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-time]')){e.preventDefault();toggleTimeCard()}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-adv]')){e.preventDefault();toggleAdvCard()}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-notes]')){e.preventDefault();toggleNotesCard()}});
 $('editor').addEventListener('toggle',e=>{if(e.target.matches?.('[data-place-card]'))placeCardOpen=e.target.open},true);
 // 地區複選：點選單外、按 Esc 或「完成」即收起
 document.addEventListener('click',e=>{const done=e.target.closest('[data-close-picker]');for(const d of document.querySelectorAll('details.region-picker[open]'))if(done?d.contains(done):!d.contains(e.target))d.open=false});
