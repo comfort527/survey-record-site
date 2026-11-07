@@ -321,7 +321,9 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
   body[data-mobile-view=preview] aside,body[data-mobile-view=preview] .editor{display:none}
   .editor{padding:10px}
   .grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .basic-single-row{grid-template-columns:1fr}
+  .basic-single-row{grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1.15fr);gap:5px;padding:8px}
+  .basic-single-row .field>span{font-size:13px}
+  .basic-single-row select,.basic-single-row input{font-size:15px;padding:5px 3px;text-overflow:ellipsis}
   .line-row{grid-template-columns:40px minmax(0,1fr)}
   .line-tools{grid-column:2;justify-content:flex-end}
   .mobile-bottom{display:grid;position:fixed;bottom:0;left:0;right:0;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px;background:#fff;border-top:1px solid var(--line);z-index:20}
@@ -859,7 +861,7 @@ function editorStop(s,i){
   }
   return `<div class="editor-heading"><div class="eyebrow">行程 ${pad2(i+1)} · ${TYPES[s.type]}</div><div class="tool-row"><button type="button" class="small" data-act="applyPlace" title="從常用場所帶入地址、樓層、※附註及注意事項（只補空白欄位）">帶入場所資料</button></div></div>
   <div class="editor-columns"><div class="editor-main">
-  <div class="basic-single-row">${selectEl('type','行程類型',tripRole(s),Object.entries(TRIP_TYPES))}${selectEl('city','縣市',s.city,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${s.type==='visit'?`${field('place','場所名稱',s.place,{list:'editorPlaceList',ph:'選擇或輸入場所'})}<datalist id="editorPlaceList">${placeOptions(s.city,s.type)}</datalist>`:transportPlaceSelect(s)}</div>
+  <div class="basic-single-row">${selectEl('type','行程類型',tripRole(s),isMobileLayout()?[['visit','一般場所'],['hsr_depart','出發站'],['hsr_arrive','抵達站']]:Object.entries(TRIP_TYPES))}${selectEl('city','縣市',s.city,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${s.type==='visit'?`${field('place','場所名稱',s.place,{list:'editorPlaceList',ph:'選擇或輸入場所'})}<datalist id="editorPlaceList">${placeOptions(s.city,s.type)}</datalist>`:transportPlaceSelect(s)}</div>
   ${special}
     <div class="block time-section"><div class="block-title title-with-input"><h3>時間</h3>${timeField}</div>
       ${expectTip(i)}
