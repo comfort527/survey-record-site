@@ -323,7 +323,10 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
   .grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .basic-single-row{grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1.15fr);gap:5px;padding:8px}
   .basic-single-row .field>span{font-size:13px}
-  .prep-title{display:none}
+  .prep-title,.place-hint{display:none}
+  .origin-row{grid-template-columns:minmax(0,.95fr) minmax(0,1.35fr) minmax(0,.8fr);gap:5px}
+  .origin-row .field>span{font-size:13px}
+  .origin-row select,.origin-row input{font-size:15px;padding:5px 3px;text-overflow:ellipsis}
   .basic-single-row select,.basic-single-row input{font-size:15px;padding:5px 3px;text-overflow:ellipsis}
   .line-row{grid-template-columns:40px minmax(0,1fr)}
   .line-tools{grid-column:2;justify-content:flex-end}
@@ -839,7 +842,7 @@ function editorGlobal(){
     <div class="block basic-block">
       <div class="grid-5"><div class="field"><span>地區</span><details class="region-picker"><summary>${esc(regions.join('、')||'選擇地區')}</summary><div class="region-options">${regionOptions.map(name=>`<label class="toggle"><input type="checkbox" data-weather-region="${esc(name)}" ${regions.includes(name)?'checked':''}>${esc(name)}</label>`).join('')}</div></details></div><label class="field"><span>氣溫（度）</span><input data-range="temp" value="${esc(tempText(g))}" placeholder="18-20" inputmode="numeric" maxlength="5" autocomplete="off"></label>${field('g.rain','降雨（%）',g.rain,{ph:'0'})}${field('g.attire','服裝',g.attire,{list:'attireList',ph:'勤務衫'})}${selectEl('g.escort',`隨行 ${toggleEl('g.escortOn','列出',g.escortOn)}`,g.escort,escortOptions)}</div>
     </div>
-    <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-3">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}<label class="field"><span>離開時間</span><input data-side="depart" value="${esc(departOf())}" placeholder="0900" inputmode="numeric" maxlength="4" autocomplete="off"></label></div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
+    <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-3 origin-row">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}<label class="field"><span>離開時間</span><input data-side="depart" value="${esc(departOf())}" placeholder="0900" inputmode="numeric" maxlength="4" autocomplete="off"></label></div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
   </div><div class="editor-side">
     <div class="block unit-section"><div class="block-title"><h3>本隊</h3><span class="count">${g.crew.length} 人 · 依資料庫順序輸出</span></div><div class="chip-grid">${chips(g.crew,'crew',DB.members)}</div><div class="add-inline"><input data-add-person="crew" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
     <div class="block contact-section"><div class="block-title"><h3>寓所</h3><span class="count">${g.residence.length} 人</span></div><div class="chip-grid">${chips(g.residence,'residence',DB.residence)}</div><div class="add-inline"><input data-add-person="residence" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
@@ -870,7 +873,7 @@ function editorStop(s,i){
       ${s.prepTimes.map((p,k)=>`<div class="prep-row"><input data-prep="${k}" data-prep-field="label" value="${esc(p.label)}" list="prepLabelList" aria-label="名稱"><input data-prep="${k}" data-prep-field="time" value="${esc(p.time)}" placeholder="0900" maxlength="4" inputmode="numeric" aria-label="時間"><button type="button" class="small danger" data-prep-del="${k}" aria-label="刪除">×</button></div>`).join('')}
       <div class="tool-row">${[...DB.prepLabels.map(l=>[l,l]),['依中心勤務命令辦理','依中心命令']].filter(([l])=>!s.prepTimes.some(p=>p.label.trim()===l)).map(([l,t])=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(t)}</button>`).join('')}</div>
     </div>
-    ${s.type==='visit'?`<div class="block route-section"><div class="block-title"><h3>地點</h3><span class="hint">可換行，換行位置照原樣輸出</span></div>
+    ${s.type==='visit'?`<div class="block route-section"><div class="block-title"><h3>地點</h3><span class="hint place-hint">可換行，換行位置照原樣輸出</span></div>
       <div class="grid-2">${field('placeLines','場所其他行（樓層、廳別）',s.placeLines,{area:true,ph:'3樓宴會廳'})}${field('event','活動名稱（藍字）',s.event,{area:true,ph:'參訪'})}</div>
       <div class="grid-2">${selectEl('privacy','公開性',s.privacy,[['','不註記'],['不公開','不公開'],['公開','公開']])}${field('people','人數（約）',s.people,{ph:'20'})}</div>
       ${field('address','地址',s.address,{area:true,rows:2})}
