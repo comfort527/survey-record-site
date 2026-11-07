@@ -323,6 +323,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
   .grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .basic-single-row{grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1.15fr);gap:5px;padding:8px}
   .basic-single-row .field>span{font-size:13px}
+  .prep-title{display:none}
   .basic-single-row select,.basic-single-row input{font-size:15px;padding:5px 3px;text-overflow:ellipsis}
   .line-row{grid-template-columns:40px minmax(0,1fr)}
   .line-tools{grid-column:2;justify-content:flex-end}
@@ -865,9 +866,9 @@ function editorStop(s,i){
   ${special}
     <div class="block time-section"><div class="block-title title-with-input"><h3>時間</h3>${timeField}</div>
       ${expectTip(i)}
-      <div class="sub-title"><span>場部時間</span><span class="hint">藍字列在時間欄</span></div>
+      <div class="sub-title prep-title"><span>場部時間</span><span class="hint">藍字列在時間欄</span></div>
       ${s.prepTimes.map((p,k)=>`<div class="prep-row"><input data-prep="${k}" data-prep-field="label" value="${esc(p.label)}" list="prepLabelList" aria-label="名稱"><input data-prep="${k}" data-prep-field="time" value="${esc(p.time)}" placeholder="0900" maxlength="4" inputmode="numeric" aria-label="時間"><button type="button" class="small danger" data-prep-del="${k}" aria-label="刪除">×</button></div>`).join('')}
-      <div class="tool-row">${DB.prepLabels.map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('')}<button type="button" class="small" data-prep-add="依中心勤務命令辦理">＋ 依中心命令</button></div>
+      <div class="tool-row">${[...DB.prepLabels.map(l=>[l,l]),['依中心勤務命令辦理','依中心命令']].filter(([l])=>!s.prepTimes.some(p=>p.label.trim()===l)).map(([l,t])=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(t)}</button>`).join('')}</div>
     </div>
     ${s.type==='visit'?`<div class="block route-section"><div class="block-title"><h3>地點</h3><span class="hint">可換行，換行位置照原樣輸出</span></div>
       <div class="grid-2">${field('placeLines','場所其他行（樓層、廳別）',s.placeLines,{area:true,ph:'3樓宴會廳'})}${field('event','活動名稱（藍字）',s.event,{area:true,ph:'參訪'})}</div>
