@@ -769,6 +769,8 @@ function render(){migrateTransportFields(state);syncTravelEstimates();if(selecte
 function originChoices(){const choices=new Map();for(const name of DB.shortNames.map(p=>p[0]))choices.set(canon(name),{name,city:guessCity(name)});for(const p of [...DB.history,...DB.places])choices.set(canon(p.name),{name:p.name,city:p.city||guessCity(p.name)});return [...choices.values()]}
 function originCityOf(name){return originChoices().find(p=>canon(p.name)===canon(name))?.city||guessCity(name)}
 function originOptions(city){return originChoices().filter(p=>cityName(p.city)!=='臺北市'||COMMON_PLACE_NAMES.includes(p.name)).filter(p=>!city||cityName(p.city)===cityName(city)).map(p=>`<option value="${esc(p.name)}"></option>`).join('')}
+// 高鐵／機場的場所是固定清單，用下拉選單（手機的 datalist 常不顯示選項）
+function transportPlaceSelect(s){const names=[...placeOptions(s.city,s.type).matchAll(/value="([^"]*)"/g)].map(m=>m[1].replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'"));if(s.place&&!names.includes(s.place))names.unshift(s.place);return selectEl('place','場所名稱',s.place,[['',names.length?'請選擇場所':'此縣市沒有高鐵站或機場'],...names.map(n=>[n,n])])}
 function placeOptions(city='',type='visit'){
   const key=cityName(city),items=type==='visit'?DB.places:[...new Map(originChoices().map(p=>{const name=transportPlaceName(p.name);return name?[canon(name),{name,city:guessCity(name)}]:null}).filter(Boolean)).values()];
   return items.filter(p=>!key||cityName(p.city)===key).map(p=>`<option value="${esc(p.name)}"></option>`).join('');
@@ -857,7 +859,7 @@ function editorStop(s,i){
   }
   return `<div class="editor-heading"><div class="eyebrow">行程 ${pad2(i+1)} · ${TYPES[s.type]}</div><div class="tool-row"><button type="button" class="small" data-act="applyPlace" title="從常用場所帶入地址、樓層、※附註及注意事項（只補空白欄位）">帶入場所資料</button></div></div>
   <div class="editor-columns"><div class="editor-main">
-  <div class="basic-single-row">${selectEl('type','行程類型',tripRole(s),Object.entries(TRIP_TYPES))}${selectEl('city','縣市',s.city,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('place','場所名稱',s.place,{list:'editorPlaceList',ph:'選擇或輸入場所'})}<datalist id="editorPlaceList">${placeOptions(s.city,s.type)}</datalist></div>
+  <div class="basic-single-row">${selectEl('type','行程類型',tripRole(s),Object.entries(TRIP_TYPES))}${selectEl('city','縣市',s.city,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${s.type==='visit'?`${field('place','場所名稱',s.place,{list:'editorPlaceList',ph:'選擇或輸入場所'})}<datalist id="editorPlaceList">${placeOptions(s.city,s.type)}</datalist>`:transportPlaceSelect(s)}</div>
   ${special}
     <div class="block time-section"><div class="block-title title-with-input"><h3>時間</h3>${timeField}</div>
       ${expectTip(i)}
@@ -1090,6 +1092,7 @@ $('editor').addEventListener('change',e=>{
     if(key==='autoDepart'&&!el.checked){obj.autoDepart=true;obj.depart=departOf()||obj.depart}
     if(key==='autoPrep'&&!el.checked){obj.autoPrep=true;obj.prep=prepOf()||obj.prep}
     if(key==='type')setTripRole(obj,el.value);else obj[key]=el.type==='checkbox'?el.checked:el.value;
+    if(key==='place'&&obj.type!=='visit'){setTripRole(obj,obj.type.replace(/^air_/,'hsr_'));placeCommitted(obj)}
     render();saveSoon();return;
   }
   if(path==='g.origin'){const city=originCityOf(state.global.origin);if(city)state.global.originCity=city;render();saveSoon();return}
