@@ -58,8 +58,10 @@ aside{padding:12px 13px;background:#eef3f6;border-right:1px solid var(--line);ov
 .splitter{position:relative;background:#e4ecee;cursor:row-resize;touch-action:none;outline:none}
 .splitter:before{content:'';position:absolute;left:calc(50% - 32px);top:3px;width:64px;height:4px;border-radius:3px;background:#a4b9be}
 .splitter:hover,.splitter:focus-visible{background:#c6e3e0}
-body.preview-hidden .main-col{grid-template-rows:1fr 0 0}
-body.preview-hidden .preview-pane,body.preview-hidden .splitter{display:none}
+body.preview-hidden .main-col{grid-template-rows:1fr 0 auto}
+body.preview-hidden .preview-body,body.preview-hidden .splitter,body.preview-hidden #previewExpand,body.preview-hidden #previewFull,body.preview-hidden #previewScope,body.preview-hidden #previewZoom,body.preview-hidden .preview-toolbar .count{display:none}
+body.preview-hidden .preview-pane{overflow:hidden;padding-top:6px;padding-bottom:6px}
+body.preview-hidden .preview-toolbar{margin-bottom:0}
 body.preview-wide .main-col{grid-template-rows:minmax(90px,10%) 10px 1fr}
 body.preview-full .preview-pane{position:fixed;inset:0;z-index:40;padding:14px 22px}
 @media(min-width:1001px){
@@ -356,6 +358,13 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .block.notes-section{background:#fbeceb;border-color:#efd3d0}
 .contact-title{margin-top:10px;padding-top:8px;border-top:1px dashed #b9c9e6}
 .line-row.kind-contact .line-kind:disabled{opacity:1;cursor:default}
+.card-toggle{cursor:pointer;user-select:none}
+.card-toggle:before{content:'▾ ';color:#5a7aa8}
+.time-section.is-collapsed .card-toggle:before{content:'▸ '}
+.time-section.is-collapsed .time-body{display:none}
+.time-section.is-collapsed>.block-title{margin-bottom:0}
+.time-summary{flex:1;min-width:0;font-size:15px;color:#2b4fb0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
+.time-section.is-collapsed .time-summary{display:block}
 </style>
 </head>
 <body data-mobile-view="list">
@@ -389,7 +398,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
     <section id="editor" class="editor" aria-label="編輯區"></section>
     <div id="splitter" class="splitter" role="separator" aria-label="拖曳調整編輯與預覽高度" aria-orientation="horizontal" tabindex="0" title="拖曳調整上下兩區高度；方向鍵也可調整"></div>
     <section class="preview-pane" aria-label="預覽">
-      <div class="preview-toolbar"><strong>會勘紀錄表預覽</strong><button id="previewExpand" type="button" class="small">放大</button><button id="previewFull" type="button" class="small" title="預覽佔滿整個畫面（Esc 結束）">滿版預覽</button><select id="previewZoom" aria-label="預覽縮放"><option value="fit">適合寬度</option><option value="100">100%</option><option value="125">125%</option><option value="150">150%</option></select><span class="spacer"></span><span class="count">點選表格列可回到編輯</span><button id="previewToggle" type="button" class="small">收起預覽</button></div>
+      <div class="preview-toolbar"><strong>會勘紀錄表預覽</strong><button id="previewExpand" type="button" class="small">放大</button><button id="previewFull" type="button" class="small" title="預覽佔滿整個畫面（Esc 結束）">滿版預覽</button><button id="previewScope" type="button" class="small" title="只預覽目前選取的行程">單項預覽</button><select id="previewZoom" aria-label="預覽縮放"><option value="fit">適合寬度</option><option value="100">100%</option><option value="125">125%</option><option value="150">150%</option></select><span class="spacer"></span><span class="count">點選表格列可回到編輯</span><button id="previewToggle" type="button" class="small">收起預覽</button></div>
       <div class="preview-body"><div class="paper-wrap"><div class="paper" id="preview"></div></div><div id="validation" class="validation" role="status"></div></div>
     </section>
   </div>
@@ -876,7 +885,9 @@ function prepButtons(s){
   return [...new Set([...DB.prepLabels,'中心開設'])].filter(l=>!used.includes(l)&&!(groupUsed&&PREP_SOLO.includes(l))&&!(l==='部署'&&used.includes('重點'))).map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('');
 }
 // 地點卡片預設收合；展開狀態在重畫編輯區時保留
-let placeCardOpen=false;
+let placeCardOpen=false,timeCardOpen=true;
+const prepSummary=s=>s.prepTimes.map(p=>(p.label||'')+(p.time||'')).filter(t=>t.trim()).join('、');
+function toggleTimeCard(){timeCardOpen=!timeCardOpen;const b=$('editor').querySelector('.time-section');if(b){b.classList.toggle('is-collapsed',!timeCardOpen);b.querySelector('[data-toggle-time]')?.setAttribute('aria-expanded',String(timeCardOpen))}}
 function placeSummary(s){const parts=[s.placeLines,s.event,s.privacy&&`(${s.privacy})`,String(s.people).trim()&&`約${String(s.people).trim()}人`,s.address].map(v=>String(v||'').replace(/\s*\n\s*/g,'')).filter(Boolean);return parts.join(' · ')||'未填'}
 function editorStop(s,i){
   const legField='';
@@ -896,11 +907,13 @@ function editorStop(s,i){
       <div class="grid-2">${selectEl('privacy','公開性',s.privacy,[['','不註記'],['不公開','不公開'],['公開','公開']])}${field('people','人數（約）',s.people,{ph:'20'})}</div>
       ${field('address','地址',s.address,{area:true,rows:2})}
     </details>`:''}
-    <div class="block time-section"><div class="block-title title-with-input"><h3>時間</h3>${timeField}</div>
+    <div class="block time-section ${timeCardOpen?'':'is-collapsed'}"><div class="block-title title-with-input"><h3 class="card-toggle" data-toggle-time role="button" tabindex="0" aria-expanded="${timeCardOpen}">時間</h3>${timeField}<span class="time-summary" data-derived="timeSummary">${esc(prepSummary(s))}</span></div>
+      <div class="time-body">
       ${expectTip(i)}
       <div class="sub-title prep-title"><span>場部時間</span><span class="hint">藍字列在時間欄</span></div>
       ${s.prepTimes.map((p,k)=>`<div class="prep-row"><input data-prep="${k}" data-prep-field="label" value="${esc(p.label)}" list="prepLabelList" aria-label="名稱"><input data-prep="${k}" data-prep-field="time" value="${esc(p.time)}" placeholder="0900" maxlength="4" inputmode="numeric" aria-label="時間"><button type="button" class="small danger" data-prep-del="${k}" aria-label="刪除">×</button></div>`).join('')}
       <div class="tool-row">${prepButtons(s)}</div>
+      </div>
     </div>
   </div><div class="editor-side">
     <div class="block unit-section">${railSeatingEditor(s)}${s.type==='hsr_depart'?'':lineEditor(s,'rites')}</div>
@@ -971,15 +984,17 @@ function autoGrow(t){t.style.height='auto';t.style.height=Math.max(36,t.scrollHe
 
 // 預覽
 function paraHTML(p){return `<p class="jc-${p.jc}${p.hang?' hang':''}" style="line-height:${(p.line/20*PT).toFixed(1)}px${p.gap?`;margin-top:${(p.gap*3.6*PT).toFixed(1)}px`:''}">${p.runs.map(r=>`<span class="${[r.b?'b':'',r.c?'c-'+r.c:''].join(' ').trim()}">${esc(r.t)}</span>`).join('')||'&nbsp;'}</p>`}
+let previewSingle=ls.get('survey-editor-v1:preview-single')==='1';
 function previewRender(){
-  const rows=buildModel();
+  const single=previewSingle,rows=buildModel().filter(r=>!single||r.kind==='head'||r.id===selected);
+  $('previewScope').textContent=single?'全表預覽':'單項預覽';$('previewScope').classList.toggle('primary',single);
   let h='<table class="survey"><colgroup><col style="width:11.45%"><col style="width:12.40%"><col style="width:47.52%"><col style="width:28.63%"></colgroup><tbody>';
   for(const r of rows){
     const sel=r.id&&r.id===selected?' selected-row':'';
     if(r.kind==='title')h+=`<tr data-id="global" class="title-row${sel}"><td colspan="4">${r.paras.map(paraHTML).join('')}</td></tr>`;
     else if(r.kind==='head')h+='<tr class="head-row"><th>時間</th><th>地點</th><th>儀節</th><th>注意事項</th></tr>';
     else if(r.kind==='span')h+=`<tr data-id="${r.id}" class="span-row${sel}"><td colspan="4"${r.shade?' class="shade"':''}>${r.paras.map(paraHTML).join('')}</td></tr>`;
-    else h+=`<tr data-id="${r.id}" class="${sel.trim()}">`+r.cells.map((c,ci)=>{const vm=r.vmerge?.[ci];if(vm==='cont')return '';return `<td${vm==='restart'?' rowspan="2"':''}>${c.map(paraHTML).join('')||'<p>&nbsp;</p>'}</td>`}).join('')+'</tr>';
+    else h+=`<tr data-id="${r.id}" class="${sel.trim()}">`+r.cells.map((c,ci)=>{const vm=single?'':r.vmerge?.[ci];if(vm==='cont')return '';return `<td${vm==='restart'?' rowspan="2"':''}>${c.map(paraHTML).join('')||'<p>&nbsp;</p>'}</td>`}).join('')+'</tr>';
   }
   $('preview').innerHTML=h+'</tbody></table>';
   const e=errors(),v=$('validation');
@@ -1017,6 +1032,7 @@ function syncInputs(){
   const set=(sel,fn)=>{const el=document.querySelector(`[data-derived="${sel}"]`);if(el)fn(el)};
   set('returnChip',el=>{const rt=returnTimeOf();el.textContent=rt?rt+' 抵':''});
   set('depart',el=>el.value=departOf());set('prep',el=>el.value=prepOf());
+  set('timeSummary',el=>{const s=current();if(s&&selected!=='global')el.textContent=prepSummary(s)});
   set('placeSummary',el=>{const s=current();if(s&&selected!=='global')el.textContent=placeSummary(s)});
   set('expect',el=>{const i=state.stops.findIndex(s=>s.id===selected);if(i>=0)el.outerHTML=expectTip(i)});
   for(const el of document.querySelectorAll('[data-range]')){if(el===act)continue;if(el.dataset.range==='temp')el.value=tempText(g);else{const i=state.stops.findIndex(s=>s.id===selected);if(i>=0){el.value=sideTimeValue(state.stops[i]);el.placeholder=sideTimePlaceholder(i)}}}
@@ -1209,6 +1225,7 @@ $('placeSyncBtn').onclick=archiveDutyHistory;
 
 // 預覽工具列與分隔線
 $('previewZoom').addEventListener('change',e=>{previewZoom=e.target.value;ls.set(KEY.zoom,previewZoom);fitPreview()});
+$('previewScope').onclick=()=>{previewSingle=!previewSingle;ls.set('survey-editor-v1:preview-single',previewSingle?'1':'0');previewRender()};
 $('previewToggle').onclick=()=>{const hid=document.body.classList.toggle('preview-hidden');$('previewToggle').textContent=hid?'展開預覽':'收起預覽';if(!hid)requestAnimationFrame(fitPreview)};
 $('previewExpand').onclick=()=>{const on=document.body.classList.toggle('preview-wide');$('previewExpand').textContent=on?'還原':'放大';requestAnimationFrame(fitPreview)};
 function setPreviewFull(on){document.body.classList.toggle('preview-full',on);$('previewFull').textContent=on?'結束滿版（Esc）':'滿版預覽';requestAnimationFrame(fitPreview)}
@@ -1470,6 +1487,8 @@ $('cloudList').addEventListener('click',e=>{
 $('cloudFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;cloudRun('上傳 JSON',async()=>{await cloudLoadList();let n=0;for(const f of files){const text=await f.text();const d=JSON.parse(text);if(!Array.isArray(d?.stops))throw Error(f.name+' 不是會勘紀錄 JSON');const name=safeFileName(f.name.replace(/\.json$/i,''))+'.json',old=cloudFiles.find(x=>x.name===name);await cloudPut(CLOUD_DIR+'/'+name,text,'上傳會勘紀錄：'+name,old?.sha);n++}await cloudLoadList();cloudStatus(`已上傳 ${n} 個檔案`)})});
 $('cloudBtn').onclick=()=>{$('cloudToken').value=cloudCfg.token||'';$('cloudRepo').value=cloudCfg.repo||'comfort527/road-table-data';$('cloudSetup').open=!cloudReady();cloudStatus('');cloudRenderState();cloudListRender();$('cloudDialog').showModal();if(cloudReady())cloudRun('讀取雲端清單',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')})};
 
+$('editor').addEventListener('click',e=>{if(e.target.closest('[data-toggle-time]'))toggleTimeCard()});
+$('editor').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-time]')){e.preventDefault();toggleTimeCard()}});
 $('editor').addEventListener('toggle',e=>{if(e.target.matches?.('[data-place-card]'))placeCardOpen=e.target.open},true);
 // 地區複選：點選單外、按 Esc 或「完成」即收起
 document.addEventListener('click',e=>{const done=e.target.closest('[data-close-picker]');for(const d of document.querySelectorAll('details.region-picker[open]'))if(done?d.contains(done):!d.contains(e.target))d.open=false});
