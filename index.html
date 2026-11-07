@@ -873,8 +873,8 @@ function editorGlobal(){
     </div>
     <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-3 origin-row">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}<label class="field"><span>離開時間</span><input data-side="depart" value="${esc(departOf())}" placeholder="0900" inputmode="numeric" maxlength="4" autocomplete="off"></label></div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
   </div><div class="editor-side">
-    <div class="block unit-section"><div class="block-title"><h3>本隊</h3><span class="count">${g.crew.length} 人 · 依資料庫順序輸出</span></div><div class="chip-grid">${chips(g.crew,'crew',DB.members)}</div><div class="add-inline"><input data-add-person="crew" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
-    <div class="block contact-section"><div class="block-title"><h3>寓所</h3><span class="count">${g.residence.length} 人</span></div><div class="chip-grid">${chips(g.residence,'residence',DB.residence)}</div><div class="add-inline"><input data-add-person="residence" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
+    <div class="block unit-section"><div class="block-title"><h3>本隊</h3><span class="count">${g.crew.length} 人 · 依資料庫順序輸出</span></div><div class="chip-grid">${chips(g.crew,'crew',DB.members)}</div></div>
+    <div class="block contact-section"><div class="block-title"><h3>寓所</h3><span class="count">${g.residence.length} 人</span></div><div class="chip-grid">${chips(g.residence,'residence',DB.residence)}</div></div>
   </div></div>`;
 }
 const TIME_LABELS={visit:'抵離時間',hsr_depart:'抵離時間（到站-發車）',hsr_arrive:'抵離時間',air_depart:'抵離時間（到場-起飛）',air_arrive:'抵離時間（到場-離開）'};
