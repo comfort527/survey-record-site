@@ -894,13 +894,13 @@ function setRailSeat(s,key,name,checked){
   sanitizeRailSeats(s);s.railSeatsOn=true;
 }
 function railSeatingLines(s){sanitizeRailSeats(s);return s.type==='hsr_depart'&&s.railSeatsOn?['6 車：'+RAIL_CAR6_PEOPLE.map(([name,key])=>name+String(s[key]||'').trim()).join('、'),...(s.railCar5On===false?[]:['5 車：'+railPassengerText(s,'railSeats5')]),...(s.railCar7On===false?[]:['7 車：'+railPassengerText(s,'railSeats7')])]:[]}
-// 5、7 車人員選項：本日本隊人員與本站先遣，去姓、排除不列入者；已排入另一車的人不再列出
+// 5、7 車人員選項：本日本隊人員，加上依行程順序從第一站到本站出現過的先遣；去姓、排除不列入者；已排入另一車的人不再列出
 const seatTokens=t=>String(t||'').split(/[、，,]/).map(x=>x.trim()).filter(Boolean);
-function railPickPeople(s){return [...new Set([...state.global.crew,...(s?.advance||[])])].filter(n=>!RAIL_SEAT_EXCLUDED.has(n)).map(n=>railSeatLabel(n)).filter((l,i,a)=>l&&a.indexOf(l)===i)}
+function railPickPeople(s){const i=state.stops.indexOf(s),advance=(i<0?[s]:state.stops.slice(0,i+1)).flatMap(x=>x?.advance||[]);return [...new Set([...state.global.crew,...advance])].filter(n=>!RAIL_SEAT_EXCLUDED.has(n)).map(n=>railSeatLabel(n)).filter((l,i,a)=>l&&a.indexOf(l)===i)}
 function railPicksMarkup(s,key){
   const other=key==='railSeats5'?'railSeats7':'railSeats5',mine=railPassengerText(s,key),theirs=s[railCarFlag(other)]===false?'':railPassengerText(s,other);
   const all=railPickPeople(s),people=all.filter(l=>!theirs.includes(l));
-  if(!all.length)return `<div class="rail-pick" data-rail-picks="${key}"><span class="hint">先在「文件設定」選本隊人員，或在本站勾選先遣，這裡會列出可選的人</span></div>`;
+  if(!all.length)return `<div class="rail-pick" data-rail-picks="${key}"><span class="hint">先在「文件設定」選本隊人員，或在本站及之前的場所勾選先遣，這裡會列出可選的人</span></div>`;
   return `<div class="rail-pick" data-rail-picks="${key}">${people.map(l=>`<button type="button" class="chip ${mine.includes(l)?'on':''}" data-rail-pick="${key}" data-label="${esc(l)}">${esc(l)}</button>`).join('')||'<span class="hint">本隊人員都已排入另一車</span>'}</div>`;
 }
 function refreshRailPicks(s){for(const el of $('editor').querySelectorAll('[data-rail-picks]'))el.outerHTML=railPicksMarkup(s,el.dataset.railPicks)}
