@@ -886,7 +886,9 @@ function prepButtons(s){
 }
 // 地點卡片預設收合；展開狀態在重畫編輯區時保留
 let placeCardOpen=false,timeCardOpen=true;
-const prepSummary=s=>s.prepTimes.map(p=>(p.label||'')+(p.time||'')).filter(t=>t.trim()).join('、');
+// 收合摘要：場檢→場、部署→部、重點→重、全員→全；場部、中心開設維持全名；例如「場0830重0900全1000」
+const PREP_SHORT={'場檢':'場','部署':'部','重點':'重','全員':'全'};
+const prepSummary=s=>s.prepTimes.map(p=>{const l=p.label.trim();return (PREP_SHORT[l]||(['場部','中心開設'].includes(l)?l:[...l][0]||''))+(p.time||'')}).filter(t=>t.trim()).join('');
 function toggleTimeCard(){timeCardOpen=!timeCardOpen;const b=$('editor').querySelector('.time-section');if(b){b.classList.toggle('is-collapsed',!timeCardOpen);b.querySelector('[data-toggle-time]')?.setAttribute('aria-expanded',String(timeCardOpen))}}
 function placeSummary(s){const parts=[s.placeLines,s.event,s.privacy&&`(${s.privacy})`,String(s.people).trim()&&`約${String(s.people).trim()}人`,s.address].map(v=>String(v||'').replace(/\s*\n\s*/g,'')).filter(Boolean);return parts.join(' · ')||'未填'}
 function editorStop(s,i){
