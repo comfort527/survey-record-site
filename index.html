@@ -694,7 +694,8 @@ function richRuns(text,base={},opt={}){
   return out;
 }
 const R=(t,b=false,c='')=>({t:String(t??''),b,c});
-const P=(runs,o={})=>({runs:runs.filter(r=>r.t!==''),jc:o.jc||'center',gap:o.gap||0,line:o.line||240,hang:o.hang||0});
+// 段落：sz 字級（半點，0＝預設 12pt）、sp 字距（1/20 pt，未指定時沿用 -20）、hangLeft 凸排左縮（未指定＝hang）
+const P=(runs,o={})=>({runs:runs.filter(r=>r.t!==''),jc:o.jc||'center',gap:o.gap||0,line:o.line||240,hang:o.hang||0,hangLeft:o.hangLeft||0,sz:o.sz||0,sp:o.sp??null});
 const q=v=>String(v??'').trim()||'？';
 const splitLines=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);
 function lineColor(key,l){if(l.tone==='black')return '';if(l.tone)return l.tone;if(key==='rites')return l.kind==='note'?'blue':'';return l.kind==='note'?'red':l.kind==='contact'?'green':''}
@@ -724,14 +725,14 @@ function placeCell(i){
   return ps;
 }
 function ritesCell(i){
-  const s=state.stops[i],ps=[];let n=0,prev=null;
-  for(const text of railSeatingLines(s))ps.push(P([R(text)],{jc:'both',line:320}));
+  const s=state.stops[i],ps=[];let n=0,prev=null;const LH=s.type==='hsr_depart'?280:320;// 高鐵出發站行高 14pt
+  for(const text of railSeatingLines(s))ps.push(P([R(text)],{jc:'both',line:LH}));
   for(const l of s.rites){
     if(!l.text.trim())continue;
     const c=lineColor('rites',l),b=lineBold('rites',l),gap=prev==='pre'&&l.kind!=='pre'?1:0;
-    if(l.kind==='step'){n++;ps.push(P([R(n+'.',b,c),...richRuns(l.text,{b,c},{parenPlain:true})],{jc:'both',line:320,gap,hang:240}))}
-    else if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'both',line:320,gap,hang:240}));
-    else ps.push(P(richRuns(l.text,{b,c}),{jc:'both',line:320,gap}));
+    if(l.kind==='step'){n++;ps.push(P([R(n+'.',b,c),...richRuns(l.text,{b,c},{parenPlain:true})],{jc:'both',line:LH,gap,hang:240}))}
+    else if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'both',line:LH,gap,hang:240}));
+    else ps.push(P(richRuns(l.text,{b,c}),{jc:'both',line:LH,gap}));
     prev=l.kind;
   }
   if(!ps.length&&(s.type==='air_depart'||s.type==='air_arrive')){const minutes=flightDuration(i);if(minutes)ps.push(P([R(`飛行時間${minutes}分鐘`,false,'blue')],{line:320}))}
@@ -739,12 +740,12 @@ function ritesCell(i){
 }
 function notesCell(i){
   const s=state.stops[i],ps=[];let prev=null;
-  if(s.advance.length){const names=s.advance.map((nm,k)=>k===0&&s.advancePhone?nm+advancePhone(nm):nm);ps.push(P([R('先遣：'),R(names.join('、'))],{jc:'left',line:240,gap:1}));prev='advance'}
-  if(isRail(s)&&s.deputyOn){ps.push(P(richRuns(`${stationShort(s.place)}值班副站長：${hsrPhone(s.place)||'？'}`,{c:'green'}),{jc:'left',line:240,gap:prev?0:1}));prev='deputy'}
+  if(s.advance.length){const names=s.advance.map((nm,k)=>k===0&&s.advancePhone?nm+advancePhone(nm):nm);ps.push(P([R('先遣：'),R(names.join('、'))],{jc:'both',line:240,gap:1,sz:22,sp:-24}));prev='advance'}
+  if(isRail(s)&&s.deputyOn){ps.push(P(richRuns(`${stationShort(s.place)}值班副站長：${hsrPhone(s.place)||'？'}`,{c:'green'}),{jc:'left',line:240,gap:prev?0:1,sp:-24}));prev='deputy'}
   for(const l of [...s.notes.filter(x=>x.kind==='contact'),...s.notes.filter(x=>x.kind!=='contact')]){
     if(!l.text.trim())continue;
-    const c=lineColor('notes',l),b=lineBold('notes',l),gap=l.kind==='note'||l.kind!==prev?1:0;
-    if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'left',line:240,gap,hang:240}));
+    const c=lineColor('notes',l),b=lineBold('notes',l),gap=l.kind==='note'?(prev==='note'?0:prev?1.5:1):l.kind!==prev?1:0;
+    if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'left',line:240,gap,hang:194,hangLeft:208}));
     else ps.push(P(richRuns(l.text,{b,c}),{jc:'left',line:240,gap}));
     prev=l.kind;
   }
@@ -1010,12 +1011,12 @@ function lineEditor(s,key,opt={}){
 function autoGrow(t){t.style.height='auto';t.style.height=Math.max(36,t.scrollHeight+2)+'px'}
 
 // 預覽
-function paraHTML(p){return `<p class="jc-${p.jc}${p.hang?' hang':''}" style="line-height:${(p.line/20*PT).toFixed(1)}px${p.gap?`;margin-top:${(p.gap*3.6*PT).toFixed(1)}px`:''}">${p.runs.map(r=>`<span class="${[r.b?'b':'',r.c?'c-'+r.c:''].join(' ').trim()}">${esc(r.t)}</span>`).join('')||'&nbsp;'}</p>`}
+function paraHTML(p){return `<p class="jc-${p.jc}${p.hang?' hang':''}" style="line-height:${(p.line/20*PT).toFixed(1)}px${p.gap?`;margin-top:${(p.gap*3.6*PT).toFixed(1)}px`:''}${p.sz?`;font-size:${(p.sz/2*PT).toFixed(1)}px`:''}${p.sp!=null?`;letter-spacing:${(p.sp/20*PT).toFixed(2)}px`:''}${p.hang?`;padding-left:${((p.hangLeft||p.hang)/20*PT).toFixed(1)}px;text-indent:-${(p.hang/20*PT).toFixed(1)}px`:''}">${p.runs.map(r=>`<span class="${[r.b?'b':'',r.c?'c-'+r.c:''].join(' ').trim()}">${esc(r.t)}</span>`).join('')||'&nbsp;'}</p>`}
 let previewSingle=ls.get('survey-editor-v1:preview-single')==='1';
 function previewRender(){
   const single=previewSingle,rows=buildModel().filter(r=>!single||r.kind==='head'||r.id===selected);
   $('previewScope').textContent=single?'全表預覽':'單項預覽';$('previewScope').classList.toggle('primary',single);
-  let h='<table class="survey"><colgroup><col style="width:11.45%"><col style="width:12.40%"><col style="width:47.52%"><col style="width:28.63%"></colgroup><tbody>';
+  let h='<table class="survey"><colgroup><col style="width:10.27%"><col style="width:13.58%"><col style="width:48.88%"><col style="width:27.27%"></colgroup><tbody>';
   for(const r of rows){
     const sel=r.id&&r.id===selected?' selected-row':'';
     if(r.kind==='title')h+=`<tr data-id="global" class="title-row${sel}"><td colspan="4">${r.paras.map(paraHTML).join('')}</td></tr>`;
@@ -1323,11 +1324,11 @@ async function readZip(buffer){
 // 產生 Word：版面依原紀錄表（A4、標楷體 12pt、雙線外框、欄寬 1195/1295/4961/2989）
 const xmlEsc=s=>String(s).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f￾￿]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KAI='<w:rFonts w:ascii="標楷體" w:eastAsia="標楷體" w:hAnsi="標楷體"/>';
-const COLS=[1195,1295,4961,2989],TBL_W=10440;
+const COLS=[1072,1418,5103,2847],TBL_W=10440; // 依使用者校正的 Word（11/07）
 // 中文避頭尾字元（與原紀錄表的 Word 設定相同）
 const NO_BREAK_AFTER='([{£¥‘“‵〈《「『【〔〝︵︷︹︻︽︿﹁﹃﹙﹛﹝（｛',NO_BREAK_BEFORE='!),.:;?]}¢·–—’”•‥…‧′╴、。〉》」』】〕〞︰︱︳︴︶︸︺︼︾﹀﹂﹄﹏﹐﹑﹒﹔﹕﹖﹗﹚﹜﹞！），．：；？］｜｝､';
-function wRun(r,tight){return `<w:r><w:rPr>${KAI}${r.b?'<w:b/><w:bCs/>':''}${r.c?`<w:color w:val="${HEX[r.c]}"/>`:''}${tight?'<w:spacing w:val="-20"/>':''}</w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`}
-function wPara(p,tight=true){return `<w:p><w:pPr><w:spacing w:before="${p.gap*72}" w:line="${p.line}" w:lineRule="exact"/>${p.hang?`<w:ind w:left="${p.hang}" w:hanging="${p.hang}"/>`:''}<w:jc w:val="${p.jc==='both'?'both':p.jc==='left'?'left':'center'}"/><w:rPr>${KAI}</w:rPr></w:pPr>${p.runs.map(r=>wRun(r,tight)).join('')}</w:p>`}
+function wRun(r,tight,p={}){const sp=p.sp!=null&&tight?p.sp:tight?-20:null;return `<w:r><w:rPr>${KAI}${r.b?'<w:b/><w:bCs/>':''}${r.c?`<w:color w:val="${HEX[r.c]}"/>`:''}${sp!=null?`<w:spacing w:val="${sp}"/>`:''}${p.sz?`<w:sz w:val="${p.sz}"/><w:szCs w:val="${p.sz}"/>`:''}</w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`}
+function wPara(p,tight=true){return `<w:p><w:pPr><w:spacing w:before="${p.gap*72}" w:line="${p.line}" w:lineRule="exact"/>${p.hang?`<w:ind w:left="${p.hangLeft||p.hang}" w:hanging="${p.hang}"/>`:''}<w:jc w:val="${p.jc==='both'?'both':p.jc==='left'?'left':'center'}"/><w:rPr>${KAI}</w:rPr></w:pPr>${p.runs.map(r=>wRun(r,tight,p)).join('')}</w:p>`}
 function wCell(w,paras,o={}){const body=(paras.length?paras:[P([])]).map(p=>wPara(p,o.tight!==false)).join('');return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.vmerge?`<w:vMerge${o.vmerge==='restart'?' w:val="restart"':''}/>`:''}${o.shade?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${body}</w:tc>`}
 function documentXml(){
   const rows=buildModel().map(r=>{
