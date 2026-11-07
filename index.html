@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>會勘紀錄表編輯器 V1.2</title>
+<style>[hidden]{display:none!important}
+:root{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;color:#243443;background:#e8eef2;font-size:20px;--line:#d3dde3;--blue:#176a70;--soft:#dceeec;--orange:#d9822b;--save:#1f6fb5}
+*{box-sizing:border-box}
+body{margin:0;background:#e8eef2}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#fff;color:inherit;border-radius:7px;padding:5px 12px;transition:background .15s,border-color .15s}
+button:hover{background:#e4edf0}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#10565b}
+button.save{background:var(--save);border-color:var(--save);color:#fff}
+button.save:hover{background:#185c97}
+button.accent{background:var(--orange);border-color:var(--orange);color:#fff}
+button.accent:hover{background:#c06f1f}
+button.danger{color:#ad3d40}
+button.small{font-size:16px;padding:3px 8px}
+h1{font-size:28px;margin:0;letter-spacing:.5px;white-space:nowrap}
+h3{margin:0;font-size:19px}
+.version{font-size:15px;background:var(--soft);color:var(--blue);border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:middle}
+.eyebrow{font-size:16px;color:#71818c;letter-spacing:1px}
+.count{font-size:16px;color:#71818c;font-weight:400}
+.hint{font-size:15px;color:#71818c}
+:where(input:not([type=checkbox]):not([type=file]),select,textarea){display:block;width:100%;border:1px solid #c4d0d8;border-radius:6px;background:#fff;padding:5px 7px;color:#263947;outline:none;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:#418e94;box-shadow:0 0 0 3px #176a7018}
+input[readonly].auto{background:#f1f6f7;color:#3d6b70;font-weight:600}
+textarea{resize:vertical;line-height:1.55}
+input[type=checkbox]{accent-color:var(--blue);width:16px;height:16px;margin:0}
+.toggle{display:inline-flex;align-items:center;gap:5px;font-size:16px;color:#566a76;font-weight:400;cursor:pointer;white-space:nowrap}
+
+/* ── 頁首 ── */
+header{background:#fff;border-bottom:1px solid var(--line);padding:7px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.header-document{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.header-field{display:flex;flex-direction:column;font-size:13px;color:#6b7d88;gap:1px}
+.header-field input{font-size:16px;padding:3px 7px;width:150px}
+#headerDate{width:142px}
+#placeSyncBtn{font-size:16px;padding:6px 11px}
+.header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.header-group{display:flex;gap:6px;align-items:center;padding-left:8px;border-left:1px solid var(--line)}
+.header-group:first-child{border-left:0;padding-left:0}
+.header-actions{gap:5px}
+.header-group{gap:5px;padding-left:6px}
+.header-actions button{font-size:15.5px;padding:5px 9px}
+h1{font-size:25px}
+#mobileMore{display:none}
+button.cloud-on{border-color:#5aa39b;background:#eef8f6}
+
+/* ── 版面 ── */
+.workspace{display:grid;grid-template-columns:330px minmax(0,1fr)}
+aside{padding:12px 13px;background:#eef3f6;border-right:1px solid var(--line);overflow:auto}
+.main-col{display:grid;grid-template-rows:minmax(150px,1fr) 10px var(--preview-h,46%);min-height:0}
+.editor{background:#fff;overflow:auto;padding:14px 24px;min-height:0}
+.preview-pane{overflow:auto;padding:10px 14px;background:#dfe7ea;min-height:0}
+.splitter{position:relative;background:#e4ecee;cursor:row-resize;touch-action:none;outline:none}
+.splitter:before{content:'';position:absolute;left:calc(50% - 32px);top:3px;width:64px;height:4px;border-radius:3px;background:#a4b9be}
+.splitter:hover,.splitter:focus-visible{background:#c6e3e0}
+body.preview-hidden .main-col{grid-template-rows:1fr 0 0}
+body.preview-hidden .preview-pane,body.preview-hidden .splitter{display:none}
+body.preview-wide .main-col{grid-template-rows:minmax(90px,10%) 10px 1fr}
+body.preview-full .preview-pane{position:fixed;inset:0;z-index:40;padding:14px 22px}
+@media(min-width:1001px){
+  body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  .workspace{flex:1;min-height:0}
+  aside{min-height:0}
+}
+
+/* ── 側欄：行程資訊區 ── */
+.sidebar-info-section{border:1px solid var(--line);border-radius:9px;margin-bottom:10px;overflow:hidden;background:#fff}
+.itinerary-info{background:#e4f0ee;padding:9px;border-color:#a9cfc8}
+.section-title{display:flex;align-items:baseline;gap:6px;cursor:pointer;list-style:none}
+.section-title::-webkit-details-marker{display:none}
+.section-title:before{content:'▾';color:#5f7d78;font-size:16px}
+details:not([open])>.section-title:before{content:'▸'}
+.section-title .label{font-size:20px;font-weight:600;color:#365952}
+.stop{display:block;width:100%;padding:6px 7px;margin:7px 0;border:1px solid #c3d6d2;border-radius:8px;background:#fff;cursor:pointer}
+.stop.selected,.itinerary-list-item.selected{border-color:#438c85;box-shadow:0 0 0 1px #438c8533;background:#e8f8f3}
+.stop .top{font-size:15px;color:#71818c;display:flex;justify-content:space-between;gap:6px;margin-bottom:3px}
+.itinerary-list-item{border:1px solid #c3d6d2;border-radius:8px;background:#fff;margin:0;padding:5px 7px;cursor:pointer}
+.itinerary-list-item:hover{border-color:#80aaa3}
+
+.itinerary-first-row{display:flex;align-items:center;justify-content:space-between;gap:4px;cursor:grab}
+.itinerary-code{font-size:15px;color:#637982;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.itinerary-move{display:flex;gap:3px;flex:none}
+.itinerary-move button{font-size:15px;padding:0 6px;line-height:1.45;min-width:25px}
+.itinerary-place-time{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:5px;align-items:center;margin-top:4px}
+.sidebar-place-input{font-size:17px;font-weight:600;padding:2px 5px}
+.sidebar-time-input{font-size:17px;text-align:center;padding:2px 3px;letter-spacing:-.3px}
+.sidebar-time-input.warn{border-color:#d9822b;background:#fff6ea}
+.itinerary-list-item.dragging{opacity:.45}
+.itinerary-list-item.drop-before{box-shadow:0 -3px 0 #176a70}
+.itinerary-list-item.drop-after{box-shadow:0 3px 0 #176a70}
+.leg-chip{display:flex;align-items:center;gap:5px;margin:4px 0 4px 14px;padding:2px 8px;font-size:15px;color:#4f6a66;border-left:2px dashed #8fb8b1}
+.leg-chip select{width:auto;font-size:15px;padding:1px 3px}
+.leg-chip input{width:52px;font-size:15px;padding:1px 4px;text-align:center}
+.leg-chip.rail{color:#8a6414;border-left-color:#d1aa52}
+.leg-chip.air{color:#46589a;border-left-color:#8d9ad0}
+.leg-chip.return{flex-wrap:wrap;margin-top:6px}
+.leg-chip.return .return-place{width:120px;text-align:left}
+.leg-chip .return-time{font-weight:700;color:#176a70}
+.add-panel{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed #a9cfc8}
+.add-panel button{font-size:15.5px;flex:1;white-space:nowrap;padding:5px 6px}
+.sidebar-section-button{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;border-radius:0;padding:9px 11px;font-size:19px;font-weight:600}
+.pending-info .sidebar-section-button{background:#fff2e2;color:#8a5a1d}
+.pending-status{font-size:14px;font-weight:600;padding:1px 8px;border-radius:999px;background:#fde0c2;color:#8a4b12}
+.pending-status.done{background:#dff1e7;color:#2d6b48}
+.tool-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.side-tools{margin-top:6px}
+.side-tools button{font-size:15px}
+
+/* ── 編輯區 ── */
+.editor-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.editor-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start}
+.editor-main,.editor-side{display:grid;gap:10px;min-width:0}
+.editor-main>.basic-single-row{width:100%;margin-bottom:0}
+.block{border:1px solid #dae1e6;border-radius:10px;padding:10px 11px;background:#edf4f6;min-width:0}
+.block-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px;flex-wrap:wrap}
+.block.basic-block,.basic-single-row{background:#e5edf9;border-color:#d6e0f0}
+.block.time-section{background:#e5edf9;border-color:#d6e0f0}
+.block.route-section{background:#e3f3f0;border-color:#d2e8e0}
+.block.unit-section{background:#f5f0e2;border-color:#e9dfcd}
+.block.contact-section{background:#e2ecff;border-color:#d3dff3}
+.block.special{background:#fff6df;border-color:#ecd9a4}
+.basic-single-row{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,.7fr) minmax(0,1.3fr);gap:10px;border:1px solid #d6e0f0;border-radius:10px;padding:10px 11px;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field>span{font-size:15px;color:#566a76;display:flex;align-items:center;justify-content:space-between;gap:6px;white-space:nowrap}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.grid-5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.pair{display:flex;align-items:center;gap:4px}
+.pair em{font-style:normal;color:#71818c}
+.tip{padding:6px 9px;background:#ffffffb0;border-left:3px solid #97b3c8;font-size:16px;color:#516879;line-height:1.6;margin-top:4px}
+.tip.warn{border-left-color:#d9822b;background:#fff6ea;color:#8a5a1d}
+.tip button{margin-left:6px}
+.special-box{border:1px dashed #d4ad52;background:#fffbef;border-radius:8px;padding:8px;margin-bottom:8px}
+.prep-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;margin-bottom:6px}
+.chip-grid{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid #c9bea3;background:#fff;border-radius:999px;padding:3px 11px;font-size:16px;color:#5c5240}
+.chip.on{background:#8a6b2c;border-color:#7a5d22;color:#fff}
+.chip .order{display:inline-block;min-width:1.2em;margin-right:3px;font-size:13px;opacity:.85}
+.contact-section .chip{border-color:#aebfdf;color:#3e5378}
+.contact-section .chip.on{background:#3f62a8;border-color:#35558f;color:#fff}
+.add-inline{margin-top:7px}
+.add-inline input{font-size:16px}
+.sub-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 6px;font-size:17px;font-weight:600;color:#3b4f62}
+.item-list-title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.item-list-title>h3{margin-right:auto}
+.phrase-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+.chip-btn{font-size:14.5px;padding:2px 8px;border-radius:6px;border:1px dashed #b8ab8b;background:#fffdf7;color:#6a5a36}
+.chip-btn:hover{background:#fff3d6}
+.chip-btn.contact{border-color:#7fb08a;color:#2f6b3c;background:#f4fbf5}
+.contact-section .chip-btn{border-color:#9db2d8;color:#3e5378;background:#f7f9ff}
+.line-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:5px;align-items:start;margin-bottom:5px}
+.line-kind{font-size:15px;padding:4px 0;font-weight:700;border-radius:6px;color:#475a66;background:#fff}
+.line-row.kind-step .line-kind{color:#24323c}
+.line-row.kind-note .line-kind{color:#1847b8}
+.line-row.kind-contact .line-kind{color:#2c6b38;font-size:13.5px}
+.line-row.kind-pre .line-kind{color:#71818c;font-size:13.5px}
+.line-row textarea{min-height:36px;height:36px;padding:5px 7px;line-height:1.45;resize:none;overflow:hidden;font-size:17px}
+.line-row.tone-red textarea{color:#c40000}
+.line-row.tone-blue textarea{color:#1d3fb0}
+.line-row.tone-green textarea{color:#25652f}
+.line-row.bold textarea{font-weight:700}
+.line-tools{display:flex;gap:3px;flex-wrap:nowrap}
+.line-tools button{font-size:14px;padding:2px 6px;min-width:26px}
+.tone-btn{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.tone-dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:#222;flex:none}
+.tone-dot.red{background:#e00}.tone-dot.blue{background:#1d3fd0}.tone-dot.green{background:#1d7a2f}.tone-dot.black{background:#222}
+.bold-btn.on{background:#3b4f62;color:#fff;border-color:#3b4f62}
+.empty-hint{font-size:15px;color:#7d8991;margin:4px 0}
+.deputy{margin-top:8px;white-space:normal}
+
+/* ── 預覽 ── */
+.preview-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.preview-toolbar strong{font-size:19px;margin-right:4px}
+.preview-toolbar select{width:auto;font-size:16px;padding:2px 5px}
+.preview-toolbar .spacer{flex:1}
+.preview-body{display:flex;gap:12px;align-items:flex-start}
+.paper-wrap{flex:1;min-width:0;overflow:hidden}
+.validation{flex:0 0 300px;background:#fff4d9;border:1px solid #ead7a9;border-radius:7px;padding:8px 10px;font-size:16px;color:#896425;line-height:1.55;max-height:100%;overflow:auto}
+.validation strong{display:block;font-size:18px;margin-bottom:3px}
+.validation ul{padding-left:20px;margin:3px 0}
+.validation.ok{background:#e7f5ec;border-color:#bfdcc9;color:#2d6b48}
+.paper{width:760px;background:#fff;box-shadow:0 3px 16px #182d3b12;padding:18px;color:#000;font-family:"DFKai-SB","BiauKai","標楷體","Kaiti TC","Noto Serif CJK TC",serif;transform-origin:top left}
+.survey{width:100%;border-collapse:collapse;table-layout:fixed;border:4px double #000;font-size:16.6px}
+.survey td,.survey th{border:1px solid #000;padding:1px 3px;vertical-align:middle;overflow-wrap:anywhere;font-weight:400}
+.survey th{font-weight:700;text-align:center;line-height:20.8px}
+.survey p{margin:0;letter-spacing:-1.2px;white-space:pre-wrap}
+.survey .title-row p{letter-spacing:0}
+.survey .jc-center{text-align:center}
+.survey .jc-both{text-align:justify}
+.survey .jc-left{text-align:left}
+.survey p.hang{padding-left:1em;text-indent:-1em}
+.survey .b{font-weight:700}
+.survey .c-blue{color:#0000ff}
+.survey .c-red{color:#ee0000}
+.survey .c-green{color:#006600}
+.survey td.shade{background:#f2f2f2}
+.survey tr[data-id]{cursor:pointer}
+.survey tr.selected-row td{background:#dff0ee}
+.survey tr.selected-row td.shade{background:#d4e9e6}
+.survey tr:hover td{outline:0}
+
+/* ── 對話框 ── */
+dialog{border:1px solid var(--line);border-radius:12px;max-width:560px;width:92vw;padding:16px;box-shadow:0 20px 80px #0003;color:#243443}
+dialog::backdrop{background:#1c303c55}
+dialog h2{margin:0 0 8px;font-size:24px}
+dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.db-dialog{max-width:1180px;width:96vw;height:min(880px,94vh);display:none;flex-direction:column}
+.db-dialog[open]{display:flex}
+.db-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.db-header h2{margin:0}
+.db-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.db-tabs button{font-size:18px}
+.db-tabs button[aria-selected=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+#dbContent{flex:1;min-height:0;overflow:auto}
+.db-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:14px;height:100%}
+.db-list{background:#eef3f6;border-radius:10px;padding:10px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.db-place{text-align:left;font-size:17px;padding:6px 9px}
+.db-place small{display:block;font-size:13px;color:#7d8991}
+.db-place.active{border-color:#438c85;background:#e8f8f3}
+
+.db-place-group{margin-top:10px}
+.db-place-group-title{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600;color:#526e78;border-bottom:1px solid #cbd8de;padding:4px 0;margin-bottom:5px;cursor:pointer;list-style:none}
+.db-place-group-title::-webkit-details-marker{display:none}
+.db-place-group-title:before{content:'▾';font-size:13px}
+.db-place-group:not([open])>.db-place-group-title:before{content:'▸'}
+.db-place-group-title>span{margin-left:auto;font-weight:400}
+.db-transport-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.db-transport-grid>.db-transport-place{margin:0;min-height:40px;padding:5px 3px;text-align:center;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-pager{justify-content:space-between;margin-top:auto}
+
+.db-edit{overflow:auto;display:flex;flex-direction:column;gap:9px;padding-right:4px}
+.db-edit textarea{min-height:110px}
+.db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.db-grid textarea{min-height:190px}
+.db-save-row{display:flex;justify-content:flex-end;gap:8px}
+.db-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.db-status{font-size:15px;color:#566b78}
+.cloud-sec{border:1px solid var(--line);border-radius:9px;padding:10px;margin:10px 0}
+.cloud-sec h3,.cloud-sec summary{font-size:18px;font-weight:600;cursor:pointer}
+.cloud-hint{font-size:15px;color:#71818c;margin:6px 0}
+.cloud-field{display:flex;flex-direction:column;gap:3px;font-size:15px;margin:7px 0}
+.cloud-list{max-height:260px;overflow:auto;margin-top:8px}
+.cloud-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.cloud-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cloud-size{font-size:14px;color:#7d8991}
+.cloud-empty{font-size:15px;color:#7d8991;padding:6px 0}
+#cloudDialog{max-width:640px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#203a43;color:#fff;padding:8px 20px;border-radius:9px;box-shadow:0 4px 25px #0002;max-width:90vw;z-index:60;font-size:17px}
+.mobile-nav,.mobile-bottom{display:none}
+
+/* ── 中尺寸 ── */
+@media(max-width:1400px){.editor-columns{grid-template-columns:1fr}}
+@media(min-width:1401px){.basic-single-row{width:calc((100% - 12px) / 2.15)}}
+@media(max-width:1000px){
+  .workspace{grid-template-columns:290px minmax(0,1fr)}
+  .main-col{display:block}
+  .splitter{display:none}
+  .editor{padding:12px}
+  .preview-body{flex-direction:column;align-items:stretch}
+  .validation{flex:none;width:100%}
+}
+
+/* 行程卡片比照道路表：序號與縣市在上，場所與抵離時間同列。 */
+.itinerary-info{background:#fff;border-color:#4fae94;box-shadow:0 4px 14px -4px #4fae9480}
+.section-title .label{font-size:17px;color:#2f4a55}
+.compact-itinerary{padding:5px 7px;margin:6px 0;box-shadow:0 1px 3px #24344305}
+.itinerary-code{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.itinerary-code>select{font-size:15px;width:105px;padding:0 3px}
+.itinerary-place-time{grid-template-columns:minmax(0,1fr) 112px;min-height:34px}
+.sidebar-place-name{width:100%;font-size:18px;font-weight:600;padding:2px 4px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:transparent}
+.sidebar-place-name:hover{background:#dceeec}
+.sidebar-place-input,.sidebar-time-input{font-size:18px;padding:2px 4px;line-height:1.5}
+.rail-seating{border:1px solid #d4ad52;border-radius:8px;background:#fffbef;padding:10px;margin-bottom:12px}
+.rail-fixed{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 8px;background:#fff;border-radius:6px;font-size:17px;margin-bottom:8px}
+.rail-fixed-person{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.rail-fixed-person>.rail-seat-number{display:inline-block;width:58px;min-width:0;padding:3px 4px;font-size:16px}
+.rail-seat-note{grid-column:2;font-size:17px;padding:4px 7px}
+.rail-car-remove{grid-column:3;grid-row:1;width:25px;min-width:25px;padding:0!important;line-height:25px}
+.rail-seat-row{display:grid;grid-template-columns:max-content minmax(0,1fr) auto;gap:6px;align-items:center;margin-top:8px;font-size:17px}
+.rail-seat-picker>.region-options{width:300px;max-width:calc(100vw - 110px)}
+.transport-inline-block{margin-bottom:10px;background:#fff;border-color:#8ba4bd;box-shadow:0 2px 8px #24344312}
+.transport-inline-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.transport-inline-label{font-size:18px;font-weight:600;white-space:nowrap}
+.transport-inline-row>input,.transport-inline-row>select{width:190px;flex:0 1 190px;min-width:85px}
+.transport-inline-row>.field{width:140px;flex:0 0 140px}
+.transport-inline-row>.flight-number{width:130px;flex:0 1 130px}
+.transport-inline-row:has(.flight-number)>select{width:155px;flex-basis:155px}
+.train-info{background:#e0e8fb;border-radius:7px;color:#4a6091;font-size:18px;line-height:1.7;padding:5px 8px;white-space:nowrap;overflow:auto;flex:1;min-width:230px}
+.region-picker{position:relative;min-width:0}
+.region-picker>summary{list-style:none;cursor:pointer;border:1px solid #c4d0d8;border-radius:6px;background:#fff;padding:5px 7px;padding-right:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:36px}
+.region-picker>summary::-webkit-details-marker{display:none}
+.region-picker>summary:after{content:'▾';position:absolute;right:7px;top:7px;font-size:15px;color:#71818c}
+.region-options{position:absolute;z-index:15;top:calc(100% + 4px);left:0;width:230px;max-height:280px;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:#fff;border:1px solid #c4d0d8;border-radius:8px;padding:12px;box-shadow:0 6px 20px #24344326}
+
+/* ── 手機 ── */
+@media(max-width:700px){
+  :root{font-size:18px}
+  header{display:block;padding:10px}
+  .header-document{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .header-document h1{flex:1 0 calc(100% - 90px);min-width:0;font-size:22px;overflow:hidden;text-overflow:ellipsis}
+  #mobileMore{display:inline-block;flex:none}
+  .header-field{flex:1 1 calc(50% - 4px);min-width:0}
+  .header-field input,#headerDate{width:100%}
+  #placeSyncBtn{flex:1 1 100%}
+  .header-actions{display:none;margin-top:8px}
+  body.mobile-more .header-actions{display:flex}
+  .header-group{border-left:0;padding-left:0}
+  .mobile-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;position:sticky;top:0;z-index:5;background:#e8eef2}
+  .mobile-nav button[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+  .workspace{display:block}
+  aside{border-right:0}
+  body[data-mobile-view=list] .main-col{display:none}
+  body[data-mobile-view=edit] aside,body[data-mobile-view=edit] .preview-pane{display:none}
+  body[data-mobile-view=preview] aside,body[data-mobile-view=preview] .editor{display:none}
+  .editor{padding:10px}
+  .grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .basic-single-row{grid-template-columns:1fr}
+  .line-row{grid-template-columns:40px minmax(0,1fr)}
+  .line-tools{grid-column:2;justify-content:flex-end}
+  .mobile-bottom{display:grid;position:fixed;bottom:0;left:0;right:0;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px;background:#fff;border-top:1px solid var(--line);z-index:20}
+  .mobile-bottom button{font-size:15px;padding:7px 4px}
+  body{padding-bottom:64px}
+  .toast{bottom:76px}
+  .db-layout{grid-template-columns:1fr;height:auto}
+  .db-list{max-height:220px}
+  .preview-pane{padding:8px}
+}
+@media print{header,aside,.editor,.preview-toolbar,.validation,.splitter,.mobile-nav,.mobile-bottom{display:none!important}.preview-pane{padding:0;background:#fff;overflow:visible}.paper{box-shadow:none;padding:0;transform:none!important;margin:0!important}.survey tr.selected-row td{background:transparent}.main-col{display:block}}
+.rail-seat-row>span{white-space:nowrap}
+</style>
+</head>
+<body data-mobile-view="list">
+<header>
+  <div class="header-document">
+    <h1>會勘紀錄表編輯器<span class="version">V1.2</span></h1>
+    <button id="mobileMore" type="button" aria-expanded="false" aria-controls="headerActions">更多</button>
+    <label class="header-field"><span>存檔名稱</span><input id="headerName" aria-label="存檔名稱"></label>
+    <label class="header-field"><span>勤務日期</span><input id="headerDate" type="date" aria-label="勤務日期"></label>
+    <button id="placeSyncBtn" type="button" class="accent" title="將勤務日期與各場所的會勘內容存入歷年勤務地點">行程存至資料庫</button>
+  </div>
+  <div class="header-actions" id="headerActions">
+    <div class="header-group" role="group" aria-label="工具"><button id="databaseBtn" type="button">常用資料庫</button><button id="htmlExportBtn" type="button">匯出已校訂 HTML</button></div>
+    <div class="header-group" role="group" aria-label="讀取"><button id="importWordBtn" type="button" title="讀取舊的會勘紀錄表 Word 檔（.docx），轉成可編輯的行程">匯入舊 Word</button><button id="openJsonBtn" type="button">讀取 JSON</button></div>
+    <div class="header-group" role="group" aria-label="雲端"><button id="cloudBtn" type="button" title="儲存與讀取雲端的會勘 JSON 及常用資料庫">雲端儲存</button></div>
+    <div class="header-group" role="group" aria-label="存檔與輸出"><button id="saveBtn" type="button" class="save">儲存JSON</button><button id="wordBtn" type="button" class="primary">下載 Word</button></div>
+  </div>
+</header>
+<nav class="mobile-nav" aria-label="手機工作區"><button type="button" data-mobile-tab="list" aria-pressed="true">行程</button><button type="button" data-mobile-tab="edit" aria-pressed="false">編輯</button><button type="button" data-mobile-tab="preview" aria-pressed="false">預覽</button></nav>
+<main class="workspace">
+  <aside>
+    <details id="itinerarySection" class="sidebar-info-section itinerary-info" open>
+      <summary class="section-title"><span class="label">行程資訊區</span><span id="stopCount" class="count"></span></summary>
+      <div id="stopList"></div>
+      <div class="add-panel"><button id="addVisit" type="button">＋ 新增場所</button></div>
+    </details>
+    <section class="sidebar-info-section pending-info"><button id="pendingBtn" type="button" class="sidebar-section-button"><span>待確認事項</span><span id="pendingStatus" class="pending-status"></span></button></section>
+    <div class="tool-row side-tools"><button id="undoBtn" type="button" class="small" disabled title="復原上一個動作（Ctrl+Z）">↶ 復原</button><button id="newBtn" type="button" class="small">建立空白紀錄</button><button id="demoBtn" type="button" class="small">載入示範</button></div>
+  </aside>
+  <div class="main-col">
+    <section id="editor" class="editor" aria-label="編輯區"></section>
+    <div id="splitter" class="splitter" role="separator" aria-label="拖曳調整編輯與預覽高度" aria-orientation="horizontal" tabindex="0" title="拖曳調整上下兩區高度；方向鍵也可調整"></div>
+    <section class="preview-pane" aria-label="預覽">
+      <div class="preview-toolbar"><strong>會勘紀錄表預覽</strong><button id="previewExpand" type="button" class="small">放大</button><button id="previewFull" type="button" class="small" title="預覽佔滿整個畫面（Esc 結束）">滿版預覽</button><select id="previewZoom" aria-label="預覽縮放"><option value="fit">適合寬度</option><option value="100">100%</option><option value="125">125%</option><option value="150">150%</option></select><span class="spacer"></span><span class="count">點選表格列可回到編輯</span><button id="previewToggle" type="button" class="small">收起預覽</button></div>
+      <div class="preview-body"><div class="paper-wrap"><div class="paper" id="preview"></div></div><div id="validation" class="validation" role="status"></div></div>
+    </section>
+  </div>
+</main>
+<nav class="mobile-bottom" aria-label="檔案與行程操作"><button type="button" data-mobile-action="openJsonBtn">讀取 JSON</button><button type="button" data-mobile-action="saveBtn">儲存 JSON</button><button type="button" data-mobile-action="addVisit">＋ 場所</button><button type="button" class="primary" data-mobile-action="wordBtn">下載 Word</button></nav>
+<div id="datalists" hidden></div>
+<input type="file" id="jsonFile" accept=".json,application/json" hidden>
+<input type="file" id="wordFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<input type="file" id="dbFile" accept=".json,application/json" hidden>
+
+<dialog id="confirmDialog"><h2 id="confirmTitle"></h2><p id="confirmText"></p><div class="dialog-actions"><button id="cancelConfirm" type="button">取消</button><button id="acceptConfirm" type="button" class="primary">確定</button></div></dialog>
+
+<dialog id="dbDialog" class="db-dialog">
+  <div class="db-header"><h2>常用資料庫</h2><button id="dbClose" type="button">關閉</button></div>
+  <div class="db-tabs" role="tablist"><button type="button" data-db-tab="places">常用場所</button><button type="button" data-db-tab="history">歷年勤務地點</button><button type="button" data-db-tab="people">人員</button><button type="button" data-db-tab="phrases">片語與選項</button><button type="button" data-db-tab="settings">設定</button></div>
+  <div id="dbContent"></div>
+  <div class="db-footer"><span id="dbStatus" class="db-status" role="status">儲存後可「匯出已校訂 HTML」，將最新資料庫寫入 HTML，供離線使用。</span><div class="tool-row"><button id="dbHtmlExport" type="button" class="primary">匯出已校訂 HTML</button><button id="dbExport" type="button">備份資料庫</button><button id="dbImport" type="button">匯入資料庫</button></div></div>
+</dialog>
+
+<dialog id="cloudDialog">
+  <div class="db-header"><h2>雲端儲存</h2><button id="cloudClose" type="button">關閉</button></div>
+  <details class="cloud-sec" id="cloudSetup"><summary>連線設定</summary>
+    <p class="cloud-hint">資料存在你自己的 GitHub 私人 repo。權杖只保存在這台裝置的瀏覽器，不會寫進網頁；與道路表編輯器放在同一網站時共用同一組權杖。</p>
+    <label class="cloud-field">GitHub 權杖<input id="cloudToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+    <label class="cloud-field">資料 repo（帳號/名稱）<input id="cloudRepo" autocomplete="off" spellcheck="false" placeholder="comfort527/road-table-data"></label>
+    <div class="tool-row"><button id="cloudConnect" type="button" class="primary">儲存並測試連線</button><button id="cloudForget" type="button" class="danger">清除此裝置的權杖</button></div>
+  </details>
+  <section class="cloud-sec"><h3>會勘 JSON</h3>
+    <div class="tool-row"><button id="cloudSaveTrip" type="button" class="primary">儲存目前紀錄到雲端</button><button id="cloudUploadFiles" type="button" title="可一次選取多個 JSON 檔，保留原本檔名">上傳本機 JSON 檔</button><button id="cloudRefresh" type="button">↻ 重新整理</button></div>
+    <input id="cloudFileInput" type="file" accept=".json,application/json" multiple hidden>
+    <div id="cloudList" class="cloud-list"></div>
+  </section>
+  <section class="cloud-sec"><h3>常用資料庫</h3>
+    <p class="cloud-hint">包含常用場所、人員、片語、高鐵副站長電話與設定。換電腦時先「下載」，修改後記得「上傳」。</p>
+    <div class="tool-row"><button id="cloudUpLib" type="button">上傳本機資料庫到雲端</button><button id="cloudDownLib" type="button">從雲端下載資料庫</button></div>
+    <div id="cloudLibInfo" class="cloud-hint"></div>
+  </section>
+  <div class="db-footer"><span id="cloudStatus" class="db-status" role="status"></span><button id="cloudLock" type="button" class="small" hidden title="清除這台裝置記住的開啟密碼，下次開啟需重新輸入">鎖定此裝置</button></div>
+</dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script id="embeddedConfig" type="application/json">{}</script>
+<script>
+'use strict';
+// 會勘紀錄表編輯器：沿用道路表編輯器的架構（左側行程、分色編輯區、可點選回編輯的預覽、常用資料庫、JSON／雲端、Word 輸出）。
+const CLEAN_DOCUMENT=document.documentElement.cloneNode(true);
+const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>globalThis.crypto?.randomUUID?.()||'r'+Date.now().toString(36)+Math.random().toString(36).slice(2);
+const pad2=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`};
+const clone=v=>JSON.parse(JSON.stringify(v));
+const normDigits=v=>String(v??'').replace(/[０-９]/g,d=>String.fromCharCode(d.charCodeAt(0)-0xFEE0));
+const canon=v=>String(v??'').replace(/\s/g,'').replace(/台/g,'臺');
+
+// 依開啟的 HTML 檔名同步版本號（例如「會勘紀錄表編輯器V1.1.html」）；無法辨識時用預設值。
+const APP_VERSION=(()=>{let f='';try{f=decodeURIComponent(location.pathname.split('/').pop()||'')}catch{}const m=f.match(/V(\d+(?:\.\d+)*)/i);return m?'V'+m[1]:'V1.2'})();
+document.title='會勘紀錄表編輯器 '+APP_VERSION;
+document.querySelector('header h1 .version').textContent=APP_VERSION;
+
+const EMBEDDED=(()=>{try{return JSON.parse($('embeddedConfig').textContent||'{}')}catch{return {}}})();
+const REVISION=/^[a-z0-9-]{1,80}$/i.test(EMBEDDED.revision||'')?EMBEDDED.revision:'builtin-v11';
+const KEY={data:'survey-editor-v1:data',db:'survey-editor-v1:db:'+REVISION,split:'survey-editor-v1:preview-height',zoom:'survey-editor-v1:preview-zoom'};
+// 雲端權杖與道路表編輯器共用（同一網站時免重新輸入）；記住密碼的鍵名則分開，避免互相清除。
+const CLOUD_KEY='road-editor-cloud:v1',CLOUD_DIR='會勘紀錄',CLOUD_LIB='資料庫/會勘資料庫.json',UNLOCK_KEY='survey-editor-unlock:v1';
+const ls={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch{return false}},del(k){try{localStorage.removeItem(k)}catch{}}};
+
+const TRIP_TYPES={visit:'一般場所',hsr_depart:'高鐵／機場出發',hsr_arrive:'高鐵／機場抵達站'};
+const TYPES={...TRIP_TYPES,air_depart:TRIP_TYPES.hsr_depart,air_arrive:TRIP_TYPES.hsr_arrive};
+const RAIL_CAR6_PEOPLE=[['永和','railSeat6Yonghe'],['泰安','railSeat6Taian'],['座官','railSeat6Officer'],['幹部','railSeat6Cadre']];
+const RAIL_SEAT_EXCLUDED=new Set([]);
+const CITIES=['臺北市','新北市','桃園市','臺中市','臺南市','高雄市','基隆市','新竹市','嘉義市','宜蘭縣','新竹縣','苗栗縣','彰化縣','南投縣','雲林縣','嘉義縣','屏東縣','臺東縣','花蓮縣','澎湖縣','金門縣','連江縣'];
+const COMMON_PLACE_NAMES=['敦南寓所','公保大樓','陽明寓所'];
+const AIRPORT_PLACES=[{name:'松山機場',city:'臺北市',aliases:['松山軍用機場','臺北松山機場','台北松山機場']},{name:'台東機場',city:'臺東縣',aliases:['臺東機場']},{name:'澎湖機場',city:'澎湖縣',aliases:[]}];
+const HSR_CITIES={'高鐵南港站':'臺北市','高鐵臺北站':'臺北市','高鐵板橋站':'新北市','高鐵桃園站':'桃園市','高鐵新竹站':'新竹縣','高鐵苗栗站':'苗栗縣','高鐵臺中站':'臺中市','高鐵彰化站':'彰化縣','高鐵雲林站':'雲林縣','高鐵嘉義站':'嘉義縣','高鐵臺南站':'臺南市','高鐵左營站':'高雄市'};
+const cityName=v=>String(v||'').trim().replace(/台/g,'臺');
+function guessCity(name,address=''){const known={...HSR_CITIES,...Object.fromEntries(AIRPORT_PLACES.map(p=>[canon(p.name),p.city])),'敦南寓所':'臺北市','陽明寓所':'臺北市','公保大樓':'臺北市','岡山軍用機場':'高雄市','松山軍用機場':'臺北市'};return known[canon(name)]||CITIES.find(c=>cityName(address).includes(c))||''}
+const tripRole=s=>s.type.replace(/^air_/,'hsr_');
+function setTripRole(s,role){const air=/機場$/.test(canon(s.place))||(!s.place.trim()&&s.type.startsWith('air_'));s.type=role==='visit'?'visit':role.replace(/^hsr_/,air?'air_':'hsr_')}
+
+const LEG_MODES={car:'車行',walk:'步行',none:'不列'};
+const TONES=['','red','blue','green','black'];
+const HEX={blue:'0000FF',red:'EE0000',green:'006600'};
+const LINE_KINDS={rites:[['step','步驟'],['note','※'],['pre','說明']],notes:[['note','※'],['contact','聯絡'],['pre','一般']]};
+const PT=724/522; // 預覽：表格寬 522pt 對應 724px
+
+// ── 常用資料庫預設值（可在「常用資料庫」修改，並以「匯出已校訂 HTML」寫回檔案）──
+const DEFAULT_DB={
+  kind:'survey-editor-database',version:1,history:[],
+  settings:{prepLead:15,origin:'敦南寓所',escort:''},escorts:[],
+  shortNames:[['敦南寓所','敦南'],['陽明寓所','陽明'],['公保大樓','公保']],
+  members:[],
+  residence:[],
+  advance:[],
+  hsr:{'高鐵南港站':'','高鐵臺北站':'','高鐵板橋站':'','高鐵桃園站':'','高鐵新竹站':'','高鐵苗栗站':'','高鐵臺中站':'','高鐵彰化站':'','高鐵雲林站':'','高鐵嘉義站':'','高鐵臺南站':'','高鐵左營站':''},
+  regions:['台北','新北','桃園','新竹','苗栗','台中','彰化','南投','雲林','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','基隆','澎湖','金門'],
+  attire:['勤務衫','休閒襯衫','便服','西裝','輕便服'],
+  prepLabels:['場檢','部署','重點','全員','場部'],
+  ritePhrases:['蒞臨(…恭迎)','步行進入…','搭乘電梯至…樓','致詞(約…分)','合影1梯次(合影畢返座)','就座','頒獎予…','導覽(全程由…導覽)','恭送。','※備「高鐵站貴賓室」'],
+  notePhrases:['空車隊？','控梯：','備用貴賓室？廁所？','致詞時使用講桌及手持麥克風。踏墊？','就座時保留席1席','安排並提供主桌座次','各講者時間提醒？','場內媒體區？場外媒體區？','準備手套、溼紙巾','門票？'],
+  contactRoles:['主辦','競辦','聯絡人','對口'],
+  places:[
+    {name:'高鐵臺北站',rites:[{kind:'note',text:'備「高鐵站貴賓室」'}]},
+    {name:'高鐵左營站',rites:[{kind:'note',text:'備「高鐵站貴賓室」'}]},
+    ...AIRPORT_PLACES.map(p=>({name:p.name,city:p.city}))
+  ]
+};
+
+const IMPORTED_HSR_NAMES=["高鐵南港站","高鐵臺北站","高鐵板橋站","高鐵桃園站","高鐵新竹站","高鐵苗栗站","高鐵臺中站","高鐵彰化站","高鐵雲林站","高鐵嘉義站","高鐵臺南站","高鐵左營站"];
+function importHsrNames(db){
+  if(db.hsrNamesRevision>=1)return db;
+  const names=new Set(db.places.map(p=>canon(p.name)));
+  for(const name of IMPORTED_HSR_NAMES){if(names.has(canon(name)))continue;db.places.push(normalizePlace({name}));names.add(canon(name))}
+  db.hsrNamesRevision=1;return db;
+}
+
+function normLines(a){return Array.isArray(a)?a.filter(l=>l&&typeof l.text==='string').map(l=>({id:typeof l.id==='string'?l.id:uid(),kind:['pre','step','note','contact'].includes(l.kind)?l.kind:'pre',text:l.text,tone:TONES.includes(l.tone)?l.tone:'',bold:typeof l.bold==='boolean'?l.bold:null})):[]}
+function normalizePlace(p){return {id:typeof p.id==='string'?p.id:uid(),name:String(p.name||'').trim(),address:String(p.address||''),city:cityName(p.city)||guessCity(p.name,p.address),placeLines:String(p.placeLines||''),rites:normLines(p.rites),notes:normLines(p.notes)}}
+function transportPlaceName(name){const key=canon(name);const station=IMPORTED_HSR_NAMES.find(n=>canon(n)===key);if(station)return station;return AIRPORT_PLACES.find(p=>[p.name,...p.aliases].some(n=>canon(n)===key))?.name||''}
+function normalizeHistoryRecord(raw){
+  if(!raw||typeof raw!=='object')return null;
+  const stop=normalizeStop(raw.stop||{...raw,place:raw.name||raw.place||''},false);stop.place=String(raw.name||stop.place).trim();if(!stop.place)return null;
+  stop.city=cityName(raw.city)||stop.city;
+  return {id:typeof raw.id==='string'?raw.id:uid(),date:String(raw.date||''),name:stop.place,city:stop.city,origin:String(raw.origin||''),stop};
+}
+function normalizeTransportLibrary(db){
+  const selected=new Map(),allowed=[...COMMON_PLACE_NAMES,...IMPORTED_HSR_NAMES];
+  for(const p of db.places){const name=allowed.find(n=>canon(n)===canon(p.name));if(!name){const id='common-'+p.id;if(!db.history.some(r=>r.id===id))db.history.push(normalizeHistoryRecord({id,name:p.name,city:p.city,stop:{...p,place:p.name}}));continue}
+    const copy={...p,name,city:COMMON_PLACE_NAMES.includes(name)?'臺北市':(p.city||guessCity(name,p.address))},existing=selected.get(name);
+    if(!existing)selected.set(name,copy);else{for(const k of ['address','placeLines'])if(!existing[k])existing[k]=copy[k];for(const k of ['rites','notes']){const texts=new Set(existing[k].map(l=>l.text));existing[k].push(...copy[k].filter(l=>!texts.has(l.text)))}}
+  }
+  const order=allowed;
+  if(!(db.commonPlacesRevision>=1)||!(db.commonRailRevision>=1))for(const name of order)if(!selected.has(name)){const saved=db.history.filter(r=>canon(r.name)===canon(name)).sort((a,b)=>b.date.localeCompare(a.date))[0];selected.set(name,normalizePlace({...saved?.stop,name,city:COMMON_PLACE_NAMES.includes(name)?'臺北市':guessCity(name,saved?.stop.address)}))}
+  db.places=order.filter(n=>selected.has(n)).map(n=>selected.get(n));db.transportPlacesRevision=1;db.commonPlacesRevision=1;db.commonRailRevision=1;return db;
+}
+function normalizeDB(raw){
+  const d=clone(DEFAULT_DB);d.places=d.places.map(normalizePlace);
+  if(!raw||typeof raw!=='object')return normalizeTransportLibrary(importHsrNames(d));
+  const strs=v=>Array.isArray(v)?v.map(x=>String(x??'').trim()).filter(Boolean):null;
+  for(const k of ['members','residence','escorts','regions','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
+  if(Array.isArray(raw.advance))d.advance=raw.advance.filter(a=>a&&String(a.name||'').trim()).map(a=>({name:String(a.name).trim(),phone:String(a.phone||'').trim()}));
+  if(raw.hsr&&typeof raw.hsr==='object')d.hsr=Object.fromEntries(Object.entries({...d.hsr,...raw.hsr}).map(([k,v])=>[k,String(v??'')]));
+  if(Array.isArray(raw.shortNames))d.shortNames=raw.shortNames.filter(p=>Array.isArray(p)&&p[0]).map(p=>[String(p[0]).trim(),String(p[1]||'').trim()]);
+  if(raw.settings&&typeof raw.settings==='object')d.settings={...d.settings,...raw.settings};
+  d.escorts=[...new Set([...d.escorts,d.settings.escort].filter(Boolean))];
+  if(Array.isArray(raw.places))d.places=raw.places.filter(p=>p&&String(p.name||'').trim()).map(normalizePlace);
+  d.history=Array.isArray(raw.history)?raw.history.map(normalizeHistoryRecord).filter(Boolean):[];
+  d.hsrNamesRevision=Number(raw.hsrNamesRevision)||0;d.transportPlacesRevision=Number(raw.transportPlacesRevision)||0;d.commonPlacesRevision=Number(raw.commonPlacesRevision)||0;d.commonRailRevision=Number(raw.commonRailRevision)||0;
+  return normalizeTransportLibrary(importHsrNames(d));
+}
+let DB=(()=>{let raw=EMBEDDED.database;try{const s=ls.get(KEY.db);if(s)raw=JSON.parse(s)}catch{}const db=normalizeDB(raw);if(!(Number(raw?.hsrNamesRevision)>=1)||!(Number(raw?.transportPlacesRevision)>=1)||!(Number(raw?.commonPlacesRevision)>=1)||!(Number(raw?.commonRailRevision)>=1))ls.set(KEY.db,JSON.stringify(db));return db})();
+function saveDB(){if(!ls.set(KEY.db,JSON.stringify(DB)))notify('資料庫暫存失敗，請先備份資料庫');renderDatalists()}
+const prepLead=()=>{const n=Number(DB.settings.prepLead);return Number.isFinite(n)&&n>=0?n:15};
+const findPlace=name=>{if(!name)return null;const key=canon(transportPlaceName(name)||name),p=DB.places.find(p=>canon(p.name)===key);if(p)return p;const r=DB.history.filter(r=>canon(transportPlaceName(r.name)||r.name)===key).sort((a,b)=>b.date.localeCompare(a.date))[0];return r?normalizePlace({...r.stop,name:r.name,city:r.city}):null};
+const hsrPhone=name=>{const k=Object.keys(DB.hsr).find(k=>canon(k)===canon(name));return k?DB.hsr[k]:''};
+const shortName=place=>{const hit=DB.shortNames.find(([a])=>canon(a)===canon(place));return hit?(hit[1]||hit[0]):String(place||'')};
+const longName=short=>{const hit=DB.shortNames.find(([a,b])=>canon(b)===canon(short)||canon(a)===canon(short));return hit?hit[0]:String(short||'')};
+const stationShort=name=>String(name||'').replace(/^高鐵/,'')||'？站';
+const advancePhone=name=>DB.advance.find(a=>a.name===name)?.phone||'';
+const isRail=s=>s.type==='hsr_depart'||s.type==='hsr_arrive';
+const isArriveType=s=>s.type==='hsr_arrive'||s.type==='air_arrive';
+
+// ── 紀錄資料 ──
+function blankLine(kind='step',text=''){return {id:uid(),kind,text,tone:'',bold:null}}
+function blankStop(type='visit',place=''){return {id:uid(),type,place,city:guessCity(place),airline:'',flightNo:'',placeLines:'',event:'',privacy:'',people:'',address:'',legMode:'car',legMinutes:'',arrive:'',depart:'',prepTimes:[],trainNo:'',trainArr:'',flightMinutes:'',rites:[],advance:[],advancePhone:false,deputyOn:true,railSeatsOn:false,railSeat6Yonghe:'',railSeat6Taian:'',railSeat6Officer:'',railSeat6Cadre:'',railCar5On:true,railCar7On:true,railCar5Note:'',railCar7Note:'',railSeats5:[],railSeats7:[],notes:[]}}
+function blankState(){return {kind:'survey-record',version:1,transportVersion:1,name:'會勘紀錄表',global:{date:today(),region:'',tempLow:'',tempHigh:'',rain:'',attire:'',originCity:guessCity(DB.settings.origin),origin:DB.settings.origin||'敦南寓所',depart:'',autoDepart:true,prep:'',autoPrep:true,escortOn:true,escort:DB.settings.escort||'',crew:[],residence:[],returnAt:'',returnMinutes:'',returnTo:DB.settings.origin||'敦南寓所'},stops:[]}}
+function normalizeStop(x,lookup=true){
+  const s=blankStop();if(!x||typeof x!=='object')return s;
+  for(const k of Object.keys(s)){
+    if(!(k in x))continue;const v=x[k];
+    if(k==='rites'||k==='notes')s[k]=normLines(v);
+    else if(k==='prepTimes')s[k]=Array.isArray(v)?v.map(p=>({label:String(p?.label??''),time:String(p?.time??'')})):[];
+    else if(['advance','railSeats5','railSeats7'].includes(k))s[k]=Array.isArray(v)?v.map(String).filter(Boolean):[];
+    else if(typeof s[k]==='boolean')s[k]=!!v;
+    else s[k]=String(v??'');
+  }
+  if(!TYPES[s.type])s.type='visit';s.legMode='car';if(!s.id)s.id=uid();s.city=cityName(s.city)||(lookup?findPlace(s.place)?.city:'')||guessCity(s.place,s.address);
+  for(const [,key] of RAIL_CAR6_PEOPLE)s[key]=String(s[key]||'').toUpperCase();
+  for(const key of ['railCar5Note','railCar7Note'])s[key]=String(s[key]||'').toUpperCase();
+  sanitizeRailSeats(s);return s;
+}
+function normalizeState(d){
+  const s=blankState();if(!d||typeof d!=='object')return s;
+  if(typeof d.name==='string')s.name=d.name;
+  const g=d.global&&typeof d.global==='object'?d.global:{};
+  for(const k of Object.keys(s.global)){if(!(k in g))continue;const cur=s.global[k];if(Array.isArray(cur))s.global[k]=Array.isArray(g[k])?g[k].map(String).filter(Boolean):cur;else if(typeof cur==='boolean')s.global[k]=!!g[k];else s.global[k]=String(g[k]??'')}
+  if(!g.originCity)s.global.originCity=originCityOf(s.global.origin);
+  s.stops=Array.isArray(d.stops)?d.stops.map(normalizeStop):[];
+  const seen=new Set();for(const t of s.stops){if(seen.has(t.id))t.id=uid();seen.add(t.id)}
+  if(!(Number(d.transportVersion)>=1))migrateTransportFields(s);
+  return s;
+}
+function migrateTransportFields(data){
+  const valid=t=>/^([01]\d|2[0-3])[0-5]\d$/.test(t||'');
+  const plus=(t,m)=>{if(!valid(t)||!/^\d{1,4}$/.test(String(m??'')))return '';const v=(Number(t.slice(0,2))*60+Number(t.slice(2))+Number(m))%1440;return String(Math.floor(v/60)).padStart(2,'0')+String(v%60).padStart(2,'0')};
+  const legacyLeave=i=>{const s=data.stops[i],p=data.stops[i-1];if(!s)return '';if(valid(s.depart))return s.depart;if(valid(s.arrive))return s.arrive;if(s.type==='hsr_arrive')return p?.trainArr||'';if(s.type==='air_arrive')return plus(legacyLeave(i-1),s.flightMinutes||p?.flightMinutes);return i?plus(legacyLeave(i-1),s.legMinutes):''};
+  for(let i=1;i<data.stops.length;i++){const a=data.stops[i],p=data.stops[i-1];if(!((a.type==='hsr_arrive'&&p.type==='hsr_depart')||(a.type==='air_arrive'&&p.type==='air_depart')))continue;if(!a.trainNo)a.trainNo=p.trainNo;if(!a.airline)a.airline=p.airline;if(!a.flightNo)a.flightNo=p.flightNo;if(!a.arrive&&a.type==='hsr_arrive')a.arrive=p.trainArr;if(!a.arrive&&a.type==='air_arrive')a.arrive=plus(legacyLeave(i-1),a.flightMinutes||p.flightMinutes);if(!a.flightMinutes)a.flightMinutes=p.flightMinutes;p.trainNo='';p.trainArr='';p.flightMinutes='';p.airline='';p.flightNo=''}
+  data.transportVersion=1;return data;
+}
+let state=(()=>{try{const s=ls.get(KEY.data);if(s)return normalizeState(JSON.parse(s))}catch{}return blankState()})();
+let selected='global',saveTimer,toastTimer,confirmAction=null;
+
+// ── 小工具 ──
+function notify(s){const t=$('toast');t.textContent=s;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,4500)}
+function ask(title,text,action,acceptLabel='確定'){confirmAction=action;$('confirmTitle').textContent=title;$('confirmText').textContent=text;$('acceptConfirm').textContent=acceptLabel;$('confirmDialog').showModal()}
+$('cancelConfirm').onclick=()=>{confirmAction=null;$('confirmDialog').close()};
+$('acceptConfirm').onclick=()=>{const a=confirmAction;confirmAction=null;$('confirmDialog').close();if(a)a()};
+function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(persist,350)}
+function persist(){clearTimeout(saveTimer);if(!ls.set(KEY.data,JSON.stringify(state)))notify('暫存失敗，請儲存 JSON 備份')}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+const safeFileName=v=>String(v||'').replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').trim().slice(0,120);
+
+// 復原：結構性動作前、以及每個欄位開始輸入時各存一份快照。
+const undoStack=[];let undoArmed=null;
+function pushUndo(){const snap=JSON.stringify(state);if(undoStack[undoStack.length-1]!==snap){undoStack.push(snap);if(undoStack.length>60)undoStack.shift()}$('undoBtn').disabled=!undoStack.length}
+function undo(){const snap=undoStack.pop();$('undoBtn').disabled=!undoStack.length;if(!snap)return;state=normalizeState(JSON.parse(snap));render();saveSoon();notify('已復原上一個動作')}
+document.addEventListener('focusin',e=>{if(e.target.matches('input,textarea'))undoArmed=e.target});
+function maybeUndo(el){if(undoArmed===el){pushUndo();undoArmed=null}}
+
+// ── 時間計算 ──
+const timeValid=t=>/^([01]\d|2[0-3])[0-5]\d$/.test(t||'');
+function addMin(t,delta){if(!timeValid(t))return '';let m=Number(t.slice(0,2))*60+Number(t.slice(2))+delta;m=((m%1440)+1440)%1440;return pad2(Math.floor(m/60))+pad2(m%60)}
+const minutesOf=v=>{const s=normDigits(v).trim();return /^\d{1,4}$/.test(s)?Number(s):null};
+function pairOf(i){const s=state.stops[i],p=state.stops[i-1];if(!p)return null;if(s.type==='hsr_arrive'&&p.type==='hsr_depart')return p;if(s.type==='air_arrive'&&p.type==='air_depart')return p;return null}
+function departOf(){const f=state.stops[0];if(f&&!isArriveType(f)&&timeValid(f.arrive)&&minutesOf(f.legMinutes)!==null)return addMin(f.arrive,-minutesOf(f.legMinutes));return ''}
+function prepOf(){const d=departOf();return timeValid(d)?addMin(d,-prepLead()):''}
+// 依前一站離開時間與車行（或高鐵、飛行）時間推算的到達時間
+function autoArrive(i){
+  const s=state.stops[i];if(!s)return '';
+  if(s.type==='hsr_arrive')return '';
+  if(s.type==='air_arrive'){const p=pairOf(i),m=minutesOf(s.flightMinutes);const t=p?leaveOf(i-1):'';return p&&m!==null&&timeValid(t)?addMin(t,m):''}
+  if(s.legMode==='none')return '';
+  const prev=i?leaveOf(i-1):departOf(),m=minutesOf(s.legMinutes);
+  return timeValid(prev)&&m!==null?addMin(prev,m):'';
+}
+function arriveOf(i){const s=state.stops[i];return s.arrive||autoArrive(i)}
+function leaveOf(i){const s=state.stops[i];return s.depart||arriveOf(i)}
+function arrivalFor(i){const p=state.stops[i],a=state.stops[i+1];return a&&((p.type==='hsr_depart'&&a.type==='hsr_arrive')||(p.type==='air_depart'&&a.type==='air_arrive'))?a:null}
+function flightDuration(i){const s=state.stops[i],a=s.type==='air_arrive'?s:arrivalFor(i),p=s.type==='air_arrive'?pairOf(i):s;if(!a||!p)return '';const ai=state.stops.indexOf(a),pi=state.stops.indexOf(p),from=leaveOf(pi),to=arriveOf(ai);if(timeValid(from)&&timeValid(to)){const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));return String((min(to)-min(from)+1440)%1440)}return a.flightMinutes||''}
+function syncTravelEstimates(){
+  const g=state.global,n=state.stops.length;if(n&&timeValid(g.returnAt)&&timeValid(leaveOf(n-1))){const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));g.returnMinutes=String((min(g.returnAt)-min(leaveOf(n-1))+1440)%1440)}
+  for(let i=1;i<state.stops.length;i++){const s=state.stops[i];if(isArriveType(s)||s.legMode==='none'||!timeValid(s.arrive))continue;const from=leaveOf(i-1);if(!timeValid(from))continue;const min=t=>Number(t.slice(0,2))*60+Number(t.slice(2));s.legMinutes=String((min(s.arrive)-min(from)+1440)%1440)}
+}
+function returnTimeOf(){if(timeValid(state.global.returnAt))return state.global.returnAt;const n=state.stops.length;if(!n)return '';const t=leaveOf(n-1),m=minutesOf(state.global.returnMinutes);return timeValid(t)&&m!==null?addMin(t,m):''}
+function timeMismatch(i){const s=state.stops[i];if(!timeValid(s.arrive))return '';const a=(()=>{const keep=s.arrive;s.arrive='';const v=autoArrive(i);s.arrive=keep;return v})();return a&&a!==s.arrive?a:''}
+// 「1000-1050」「18-20」這類範圍輸入：統一全形數字與破折號；連續輸入時自動補「-」
+function normRange(v,w=4){const t=normDigits(v).replace(/[－–—~～〜]/g,'-').replace(/[^\d-]/g,''),k=t.indexOf('-');if(k<0)return t.length>w?t.slice(0,w)+'-'+t.slice(w,2*w):t;return t.slice(0,k).slice(0,w)+'-'+t.slice(k+1).replace(/-/g,'').slice(0,w)}
+const tempText=g=>g.tempLow&&g.tempHigh&&g.tempLow!==g.tempHigh?g.tempLow+'-'+g.tempHigh:(g.tempLow||g.tempHigh||'');
+function hasLegRow(s){return !isArriveType(s)&&s.legMode!=='none'}
+
+// ── 文字標記：「？」自動紅色粗體；*文字* 紅色粗體（同道路表編輯器）；步驟中括號內不加粗 ──
+function richRuns(text,base={},opt={}){
+  const out=[],chars=[...String(text??'')];let emph=false,depth=0;
+  const push=(ch,b,c)=>{const last=out[out.length-1];if(last&&last.b===b&&last.c===c)last.t+=ch;else out.push({t:ch,b,c})};
+  for(let i=0;i<chars.length;i++){
+    const ch=chars[i];
+    if(ch==='*'&&(emph||chars.indexOf('*',i+1)>i)){emph=!emph;continue}
+    let b=!!base.b,c=base.c||'';
+    if(opt.parenPlain&&(ch==='('||ch==='（'))depth++;
+    if(opt.parenPlain&&depth>0)b=false;
+    if(ch==='？'||ch==='?'){b=true;c='red'}
+    if(emph){b=true;c='red'}
+    push(ch,b,c);
+    if(opt.parenPlain&&(ch===')'||ch==='）')&&depth>0)depth--;
+  }
+  return out;
+}
+const R=(t,b=false,c='')=>({t:String(t??''),b,c});
+const P=(runs,o={})=>({runs:runs.filter(r=>r.t!==''),jc:o.jc||'center',gap:o.gap||0,line:o.line||240,hang:o.hang||0});
+const q=v=>String(v??'').trim()||'？';
+const splitLines=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);
+function lineColor(key,l){if(l.tone==='black')return '';if(l.tone)return l.tone;if(key==='rites')return l.kind==='note'?'blue':'';return l.kind==='note'?'red':l.kind==='contact'?'green':''}
+function lineBold(key,l){const c=lineColor(key,l);if(l.kind==='step')return l.bold!==false;if(l.kind==='pre')return l.bold===true||(key==='notes'&&c==='red'&&l.bold!==false);if(l.kind==='note')return c==='red';return l.bold===true}
+
+function rocDateText(){const v=state.global.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return '？年？月？日(？)';const d=new Date(v+'T12:00:00');return `${d.getFullYear()-1911}年${d.getMonth()+1}月${d.getDate()}日(${'日一二三四五六'[d.getDay()]})`}
+function weatherText(){const g=state.global;const temp=g.tempLow&&g.tempHigh&&g.tempLow!==g.tempHigh?`${g.tempLow}-${g.tempHigh}`:q(g.tempLow||g.tempHigh);return `${q(String(g.region).replace(/地區$/,''))}地區，${temp}度，降雨${q(g.rain)}% (${q(g.attire)})`}
+function legRuns(mode,minutes){const m=String(minutes??'').trim();return [R(mode==='walk'?'步行時間':'車行時間',true),R(m||'？',true,m?'blue':'red'),R('分鐘',true)]}
+
+// ── 輸出模型：預覽與 Word 共用同一份，確保兩者一致 ──
+function timeCell(i){
+  const s=state.stops[i],a=arriveOf(i),air=s.type==='air_depart'||s.type==='air_arrive';
+  const main=(a||'？')+(s.depart?'-'+s.depart:'');
+  const ps=[P([R(main,true)],{line:240})];
+  s.prepTimes.forEach(p=>{const t=(p.label||'')+(p.time||'');if(t.trim())ps.push(P(richRuns(t,{c:'blue'}),{line:240,gap:1}))});
+  return ps;
+}
+function placeCell(i){
+  const s=state.stops[i],ps=[];
+  [q(s.place),...splitLines(s.placeLines)].forEach(t=>ps.push(P(richRuns(t,{b:true}),{line:280})));
+  let gap=1;const blue=t=>{ps.push(P(richRuns(t,{b:true,c:'blue'}),{line:280,gap}));gap=0};
+  if(isArriveType(s)){const t=transportText(s,i);if(t)blue(t)}
+  splitLines(s.event).forEach(blue);
+  if(s.privacy)blue(`(${s.privacy})`);
+  if(String(s.people).trim())blue(`約${String(s.people).trim()}人`);
+  gap=1;splitLines(s.address).forEach(t=>{ps.push(P(richRuns(t,{}),{line:280,gap}));gap=0});
+  return ps;
+}
+function ritesCell(i){
+  const s=state.stops[i],ps=[];let n=0,prev=null;
+  for(const text of railSeatingLines(s))ps.push(P([R(text)],{jc:'both',line:320}));
+  for(const l of s.rites){
+    if(!l.text.trim())continue;
+    const c=lineColor('rites',l),b=lineBold('rites',l),gap=prev==='pre'&&l.kind!=='pre'?1:0;
+    if(l.kind==='step'){n++;ps.push(P([R(n+'.',b,c),...richRuns(l.text,{b,c},{parenPlain:true})],{jc:'both',line:320,gap,hang:240}))}
+    else if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'both',line:320,gap,hang:240}));
+    else ps.push(P(richRuns(l.text,{b,c}),{jc:'both',line:320,gap}));
+    prev=l.kind;
+  }
+  if(!ps.length&&(s.type==='air_depart'||s.type==='air_arrive')){const minutes=flightDuration(i);if(minutes)ps.push(P([R(`飛行時間${minutes}分鐘`,false,'blue')],{line:320}))}
+  return ps;
+}
+function notesCell(i){
+  const s=state.stops[i],ps=[];let prev=null;
+  if(s.advance.length){const names=s.advance.map((nm,k)=>k===0&&s.advancePhone?nm+advancePhone(nm):nm);ps.push(P([R('先遣：'),R(names.join('、'))],{jc:'left',line:240,gap:1}));prev='advance'}
+  if(isRail(s)&&s.deputyOn){ps.push(P(richRuns(`${stationShort(s.place)}值班副站長：${hsrPhone(s.place)||'？'}`,{c:'green'}),{jc:'left',line:240,gap:prev?0:1}));prev='deputy'}
+  for(const l of s.notes){
+    if(!l.text.trim())continue;
+    const c=lineColor('notes',l),b=lineBold('notes',l),gap=l.kind==='note'||l.kind!==prev?1:0;
+    if(l.kind==='note')ps.push(P([R('※',b,c),...richRuns(l.text.replace(/^※\s*/,''),{b,c})],{jc:'left',line:240,gap,hang:240}));
+    else ps.push(P(richRuns(l.text,{b,c}),{jc:'left',line:240,gap}));
+    prev=l.kind;
+  }
+  return ps;
+}
+function buildModel(){
+  const g=state.global,st=state.stops,rows=[];
+  rows.push({kind:'title',id:'global',paras:[P(richRuns(rocDateText()+'勤務會勘紀錄表',{b:true}),{line:240}),P(richRuns(weatherText(),{b:true,c:'blue'}),{line:240})]});
+  rows.push({kind:'head'});
+  rows.push({kind:'cells',id:'global',cells:[[P([R(q(departOf())+'離',true)],{line:300})],[P(richRuns(q(g.origin),{b:true}),{line:300})],[P([],{line:300})],[P([R(q(prepOf())+'備車',true)],{line:300})]]});
+  const first=st[0],firstRuns=first&&!hasLegRow(first)?[]:legRuns(first?.legMode||'car',first?.legMinutes||'');
+  if(firstRuns.length&&g.escortOn&&String(g.escort).trim())firstRuns.push(R('('),R('座車隨行-'+g.escort.trim(),false,'blue'),R(')'));
+  const crew=[];if(g.crew.length||g.residence.length){crew.push(R('本隊：',true),R(g.crew.join('、')||'？'));if(g.residence.length)crew.push(R('；寓所：',true),R(g.residence.join('、')))}
+  const firstParas=[...(firstRuns.length?[P(firstRuns,{line:300})]:[]),...(crew.length?[P(crew,{line:300})]:[])];
+  if(firstParas.length)rows.push({kind:'span',id:'global',shade:'F2F2F2',paras:firstParas});
+  st.forEach((s,i)=>{
+    if(i>0&&hasLegRow(s))rows.push({kind:'span',id:s.id,paras:[P(legRuns(s.legMode,s.legMinutes),{line:320})]});
+    const row={kind:'cells',id:s.id,cells:[timeCell(i),placeCell(i),ritesCell(i),notesCell(i)]};
+    const prevRow=rows[rows.length-1];
+    // 機場出發與抵達相鄰、且抵達站沒有儀節時，儀節欄上下合併（同原表「飛行時間 50 分鐘」）
+    if(s.type==='air_arrive'&&pairOf(i)&&!s.rites.some(l=>l.text.trim())&&prevRow?.id===st[i-1].id&&prevRow.kind==='cells'){prevRow.vmerge={2:'restart'};row.vmerge={2:'cont'}}
+    rows.push(row);
+  });
+  const rt=returnTimeOf();
+  rows.push({kind:'span',id:'global',paras:[P([...legRuns('car',g.returnMinutes),R('(',true),R((rt||'？')+'時',false,rt?'blue':'red'),R('返'+q(shortName(g.returnTo))),R(')',true)],{line:320})]});
+  return rows;
+}
+
+// ── 待確認事項 ──
+function errors(){
+  const e=[],g=state.global,st=state.stops;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(g.date))e.push('勤務日期尚未填寫');
+  const miss=[['region','地區'],['rain','降雨機率'],['attire','服裝']].filter(([k])=>!String(g[k]).trim()).map(([,l])=>l);
+  if(!g.tempLow&&!g.tempHigh)miss.splice(1,0,'氣溫');
+  if(miss.length)e.push('天氣列尚缺：'+miss.join('、'));
+  if(!timeValid(departOf()))e.push('需首站抵達時間與紀錄原有的首段車行分鐘，才能反推出發時間');
+  if(!g.crew.length)e.push('尚未選擇本隊人員');
+  if(!st.length)e.push('尚未新增場所');
+  st.forEach((s,i)=>{
+    const n=`${pad2(i+1)} ${s.place.trim()||'未命名'}`;
+    if(!s.place.trim())e.push(n+'：尚未填寫場所名稱');
+    if(!timeValid(arriveOf(i)))e.push(n+'：缺少抵達時間');
+    for(const [k,l] of [['arrive','抵達'],['depart','離開'],['trainArr','高鐵抵達']])if(s[k]&&!timeValid(s[k]))e.push(n+`：${l}時間格式不正確`);
+    if(hasLegRow(s)&&minutesOf(s.legMinutes)===null)e.push(n+(i?'：缺少可推算車行時間的行程時刻':'：紀錄未含首段車行分鐘'));
+    const mm=timeMismatch(i);if(mm)e.push(n+`：抵達 ${s.arrive} 與推算 ${mm} 不符`);
+    if(timeValid(arriveOf(i))&&timeValid(s.depart)&&s.depart<arriveOf(i)&&!(s.depart<'0300'))e.push(n+'：離開時間早於抵達時間');
+    if(s.type==='hsr_depart'&&!arrivalFor(i))e.push(n+'：下一筆應為對應的抵達站');
+    if(s.type==='hsr_arrive'&&!s.trainNo.trim())e.push(n+'：尚未填寫車次');
+    if(isArriveType(s)&&!pairOf(i))e.push(n+'：前一筆不是對應的出發站');
+    if(s.type==='air_depart'&&!arrivalFor(i))e.push(n+'：下一筆應為對應的抵達站');
+    if(isRail(s)&&s.deputyOn&&!hsrPhone(s.place))e.push(n+'：資料庫沒有此站副站長電話');
+    const qn=qMarks(s);
+    const red=s.notes.filter(l=>l.text.trim()&&lineColor('notes',l)==='red').length;
+    if(qn||red)e.push(n+`：${qn?`「？」${qn} 處`:''}${qn&&red?'、':''}${red?`紅字待確認 ${red} 項`:''}`);
+  });
+  if(minutesOf(g.returnMinutes)===null)e.push('返程車行時間尚未填寫');
+  return e;
+}
+function qMarks(s){return ([s.place,s.placeLines,s.event,s.address,...s.rites.map(l=>l.text),...s.notes.map(l=>l.text)].join('\n').match(/[？?]+/g)||[]).length}
+function pendingCounts(){let qn=0,red=0;for(const s of state.stops){qn+=qMarks(s);red+=s.notes.filter(l=>l.text.trim()&&lineColor('notes',l)==='red').length}return {qn,red}}
+
+// ── 畫面 ──
+const stopById=id=>state.stops.find(s=>s.id===id);
+const current=()=>selected==='global'?state.global:stopById(selected);
+function render(){migrateTransportFields(state);syncTravelEstimates();if(selected!=='global'&&!stopById(selected))selected='global';$('headerName').value=state.name;$('headerDate').value=state.global.date;listRender();editorRender();previewRender()}
+function originChoices(){const choices=new Map();for(const name of DB.shortNames.map(p=>p[0]))choices.set(canon(name),{name,city:guessCity(name)});for(const p of [...DB.history,...DB.places])choices.set(canon(p.name),{name:p.name,city:p.city||guessCity(p.name)});return [...choices.values()]}
+function originCityOf(name){return originChoices().find(p=>canon(p.name)===canon(name))?.city||guessCity(name)}
+function originOptions(city){return originChoices().filter(p=>cityName(p.city)!=='臺北市'||COMMON_PLACE_NAMES.includes(p.name)).filter(p=>!city||cityName(p.city)===cityName(city)).map(p=>`<option value="${esc(p.name)}"></option>`).join('')}
+function placeOptions(city='',type='visit'){
+  const key=cityName(city),items=type==='visit'?DB.places:[...new Map(originChoices().map(p=>{const name=transportPlaceName(p.name);return name?[canon(name),{name,city:guessCity(name)}]:null}).filter(Boolean)).values()];
+  return items.filter(p=>!key||cityName(p.city)===key).map(p=>`<option value="${esc(p.name)}"></option>`).join('');
+}
+function cityOptions(value='',placeholder='全部縣市'){return [['',placeholder],...CITIES.map(c=>[c,c]),...(!CITIES.includes(value)&&value?[[value,value]]:[])].map(([v,l])=>`<option value="${esc(v)}" ${v===value?'selected':''}>${esc(l)}</option>`).join('')}
+function renderDatalists(){
+  const places=new Set([...DB.places.map(p=>p.name),...Object.keys(DB.hsr),...DB.shortNames.map(p=>p[0])]);
+  const opts=list=>[...list].map(v=>`<option value="${esc(v)}"></option>`).join('');
+  $('datalists').innerHTML=`<datalist id="placeList">${opts(places)}</datalist><datalist id="regionList">${opts(DB.regions)}</datalist><datalist id="attireList">${opts(DB.attire)}</datalist><datalist id="prepLabelList">${opts([...DB.prepLabels,'依中心勤務命令辦理'])}</datalist>`;
+}
+
+// 側欄：行程資訊區
+function sideTimeValue(s){const a=s.arrive||(isArriveType(s)&&s.depart?autoArrive(state.stops.indexOf(s)):'');return a||s.depart?(a||'')+(s.depart?'-'+s.depart:''):''}
+function sideTimePlaceholder(i){const a=autoArrive(i);return a?a+'-離開':'1000-1050'}
+function legChip(i){
+  const s=state.stops[i],p=state.stops[i-1];
+  if(s.type==='air_arrive')return `<div class="leg-chip air" data-derived-chip="${s.id}">${legChipText(i)}</div>`;
+  return '';
+}
+function transportText(s,i=state.stops.indexOf(s)){const p=pairOf(i),air=s.type==='air_arrive',from=p?leaveOf(i-1):'';const name=air?String(s.airline||'').trim()+(s.flightNo?'-'+s.flightNo:''):(s.trainNo||'____')+'車次';if(air&&!name)return '';return `${name}(${from||'____'}-${arriveOf(i)||'____'})`}
+// 側欄移動列：缺的資料以「？」表示，不用底線
+function legChipText(i){const s=state.stops[i];if(!pairOf(i))return '⚠ 前一筆應為對應的出發站';const from=leaveOf(i-1)||'？',to=arriveOf(i)||'？';if(s.type==='air_arrive'){const name=String(s.airline||'').trim()+(s.flightNo?'-'+s.flightNo:''),m=flightDuration(i);return esc(`飛行 ${name?name+' ':''}${from}→${to}${m?`（${m} 分）`:''}`)}return esc(`高鐵 ${s.trainNo||'？'}車次 ${from}→${to}`)}
+function listRender(){
+  const g=state.global,st=state.stops;
+  let h=`<div class="stop ${selected==='global'?'selected':''}" data-select="global"><div class="top"><span>文件設定</span><span>出發</span></div><div class="itinerary-place-time"><input class="sidebar-place-input" data-side="origin" value="${esc(g.origin)}" placeholder="出發場所" list="placeList" aria-label="出發場所"><input class="sidebar-time-input auto" data-side="depart" readonly value="${esc(departOf())}" placeholder="離開" aria-label="自動反推離開時間"></div></div>`;
+  st.forEach((s,i)=>{
+    h+=legChip(i);
+    h+=`<div class="itinerary-list-item compact-itinerary type-${s.type} ${selected===s.id?'selected':''}" data-select="${s.id}" data-drag-stop="${s.id}"><div class="itinerary-first-row" data-drag-handle title="拖曳調整順序"><div class="itinerary-code"><span>${pad2(i+1)} · ${esc(TYPES[s.type])}</span></div><div class="itinerary-move"><button type="button" class="small" data-stop-move="up" data-stop-id="${s.id}" ${i===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-stop-move="down" data-stop-id="${s.id}" ${i===st.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-stop-delete="${s.id}" aria-label="刪除" title="刪除">×</button></div></div><div class="itinerary-place-time"><input class="sidebar-place-input" data-side-place="${esc(s.id)}" value="${esc(s.place)}" placeholder="場所名稱" aria-label="行程 ${i+1} 場所名稱" autocomplete="off"><input class="sidebar-time-input ${timeMismatch(i)?'warn':''}" data-side-time="${s.id}" value="${esc(sideTimeValue(s))}" placeholder="${esc(sideTimePlaceholder(i))}" maxlength="9" aria-label="抵離時間" title="${esc(timeMismatch(i)?'與推算抵達 '+timeMismatch(i)+' 不符':'抵離時間，例如 1000-1050')}"></div></div>`;
+  });
+  const rt=returnTimeOf();
+  h+=`<div class="stop return-stop"><div class="top"><span>返程</span><span>返抵</span></div><div class="itinerary-place-time"><input class="sidebar-place-input" data-return-to value="${esc(g.returnTo)}" list="placeList" aria-label="返抵場所"><input class="sidebar-time-input" data-return-at value="${esc(rt)}" placeholder="返抵時間" maxlength="4" inputmode="numeric" aria-label="返抵時間"></div></div>`;
+  $('stopList').innerHTML=h;$('stopCount').textContent=st.length+' 筆';updatePending();
+}
+function updatePending(){const {qn,red}=pendingCounts(),e=errors(),el=$('pendingStatus');el.textContent=e.length?`${e.length} 項${qn?' · ？'+qn:''}${red?' · 紅字'+red:''}`:'完成';el.classList.toggle('done',!e.length)}
+
+// 編輯區元件
+const pathValue=path=>{const [o,k]=targetOf(path);return o?o[k]:''};
+function targetOf(path){if(path.startsWith('g.'))return [state.global,path.slice(2)];return [selected==='global'?null:stopById(selected),path]}
+const TIME_PATHS=new Set(['arrive','depart','trainArr','g.depart','g.prep']);
+const NUM_PATHS=new Set(['legMinutes','flightMinutes','people','g.rain','g.returnMinutes']);
+function inputEl(path,value,o={}){const t=TIME_PATHS.has(path),n=NUM_PATHS.has(path);if(o.area)return `<textarea data-path="${path}" rows="${o.rows||2}" placeholder="${esc(o.ph||'')}">${esc(value)}</textarea>`;return `<input data-path="${path}" value="${esc(value)}" ${o.list?`list="${o.list}"`:''} placeholder="${esc(o.ph||(t?'0900':''))}" ${t?'inputmode="numeric" maxlength="4"':n?'inputmode="numeric" maxlength="5"':''} autocomplete="off">`}
+const field=(path,label,value,o={})=>`<label class="field ${o.cls||''}"><span>${label}${o.extra||''}</span>${inputEl(path,value,o)}</label>`;
+const selectEl=(path,label,value,options)=>`<label class="field"><span>${label}</span><select data-path="${path}">${options.map(([v,t])=>`<option value="${esc(v)}" ${String(v)===String(value)?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`;
+const checkbox=(path,on)=>`<input type="checkbox" data-path="${path}" ${on?'checked':''}>`;
+const toggleEl=(path,label,on)=>`<label class="toggle">${checkbox(path,on)}${label}</label>`;
+
+function editorRender(){
+  const ed=$('editor'),keep=ed.scrollTop;
+  const s=current();
+  ed.innerHTML=selected==='global'?editorGlobal():editorStop(s,state.stops.indexOf(s));
+  ed.scrollTop=keep;
+  ed.querySelectorAll('.line-row textarea').forEach(autoGrow);
+}
+const selectedRegions=()=>String(state.global.region||'').split(/[、,，/／]/).map(s=>s.trim()).filter(Boolean);
+function editorGlobal(){
+  const g=state.global;
+  const regions=selectedRegions(),regionOptions=[...new Set([...DB.regions,...regions])];
+  const escortOptions=[...new Set([...DB.escorts,DB.settings.escort,g.escort].filter(Boolean))].map(n=>[n,n]);
+  if(!g.escort)escortOptions.unshift(['','請選擇']);
+  const chips=(list,key,members)=>members.map(n=>`<button type="button" class="chip ${list.includes(n)?'on':''}" data-chip="${key}" data-name="${esc(n)}">${esc(n)}</button>`).join('')+list.filter(n=>!members.includes(n)).map(n=>`<button type="button" class="chip on" data-chip="${key}" data-name="${esc(n)}" title="臨時人員，點選移除">${esc(n)}</button>`).join('');
+  return `<div class="editor-heading"><div class="eyebrow">文件設定</div><span class="hint">標題日期取自上方「勤務日期」</span></div>
+  <div class="editor-columns"><div class="editor-main">
+    <div class="block basic-block">
+      <div class="grid-5"><div class="field"><span>地區</span><details class="region-picker"><summary>${esc(regions.join('、')||'選擇地區')}</summary><div class="region-options">${regionOptions.map(name=>`<label class="toggle"><input type="checkbox" data-weather-region="${esc(name)}" ${regions.includes(name)?'checked':''}>${esc(name)}</label>`).join('')}</div></details></div><label class="field"><span>氣溫（度）</span><input data-range="temp" value="${esc(tempText(g))}" placeholder="18-20" inputmode="numeric" maxlength="5" autocomplete="off"></label>${field('g.rain','降雨（%）',g.rain,{ph:'0'})}${field('g.attire','服裝',g.attire,{list:'attireList',ph:'勤務衫'})}${selectEl('g.escort',`隨行 ${toggleEl('g.escortOn','列出',g.escortOn)}`,g.escort,escortOptions)}</div>
+    </div>
+    <div class="block basic-block"><div class="block-title"><h3>出發場所</h3></div><div class="grid-2">${selectEl('g.originCity','縣市',g.originCity,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('g.origin','場所名稱',g.origin,{list:'originPlaceList',ph:'選擇或輸入出發場所'})}</div><datalist id="originPlaceList">${originOptions(g.originCity)}</datalist></div>
+  </div><div class="editor-side">
+    <div class="block unit-section"><div class="block-title"><h3>本隊</h3><span class="count">${g.crew.length} 人 · 依資料庫順序輸出</span></div><div class="chip-grid">${chips(g.crew,'crew',DB.members)}</div><div class="add-inline"><input data-add-person="crew" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
+    <div class="block contact-section"><div class="block-title"><h3>寓所</h3><span class="count">${g.residence.length} 人</span></div><div class="chip-grid">${chips(g.residence,'residence',DB.residence)}</div><div class="add-inline"><input data-add-person="residence" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div></div>
+  </div></div>`;
+}
+const TIME_LABELS={visit:'抵離時間',hsr_depart:'抵離時間（到站-發車）',hsr_arrive:'抵離時間（到站-離站）',air_depart:'抵離時間（到場-起飛）',air_arrive:'抵離時間（到場-離開）'};
+function expectTip(i){
+  const s=state.stops[i],a=autoArrive(i),mm=timeMismatch(i);
+  if(mm)return `<div class="tip warn" data-derived="expect">抵達 ${esc(s.arrive)} 與推算 ${esc(mm)} 不符<button type="button" class="small" data-act="applyExpected">改為 ${esc(mm)}</button></div>`;
+  if(s.type==='hsr_arrive'&&pairOf(i))return '<div class="tip" data-derived="expect">抵離時間前段是高鐵到站時間，後段是離站時間。</div>';
+  if(isArriveType(s))return `<div class="tip" data-derived="expect">${pairOf(i)?'在本站設定車次／航班與抵達時間，會同步顯示於前一站。':'請先新增對應的出發站。'}</div>`;
+  return `<div class="tip" data-derived="expect">${a?(s.arrive?'抵達時間與推算一致':`未填抵達時間，依前站推算：${esc(a)}`):i===0?'第一站：填寫抵離時間後，離開與備車時間會自動反推':'填寫車行時間後，會依前站離開時間推算抵達'}</div>`;
+}
+function editorStop(s,i){
+  const legField='';
+  const timeField=`<label class="field"><span>${TIME_LABELS[s.type]}</span><input data-range="time" value="${esc(sideTimeValue(s))}" placeholder="${esc(sideTimePlaceholder(i))}" inputmode="numeric" maxlength="9" autocomplete="off"></label>`;
+  let special='';
+  if(isArriveType(s)){
+    const air=s.type==='air_arrive',airlines=[...new Set(['立榮航空','華信航空',s.airline].filter(Boolean))];
+    const control=air?`<label class="transport-inline-label" for="arrival-airline">航空公司</label><select id="arrival-airline" data-path="airline"><option value="">請選擇航空公司</option>${airlines.map(n=>`<option value="${esc(n)}" ${s.airline===n?'selected':''}>${esc(n)}</option>`).join('')}</select><input class="flight-number" data-path="flightNo" aria-label="航班號碼" placeholder="航班號碼" value="${esc(s.flightNo)}">`:`<label class="transport-inline-label" for="arrival-train">車次</label><input id="arrival-train" data-path="trainNo" aria-label="車次" value="${esc(s.trainNo)}">`;
+    special=`<div class="block transport-inline-block"><div class="transport-inline-row">${control}<div class="train-info" data-arrival-transport="${esc(s.id)}">${esc(transportText(s,i)||'未填航空公司與航班（Word 不列出）')}</div></div></div>`;
+  }
+  return `<div class="editor-heading"><div class="eyebrow">行程 ${pad2(i+1)} · ${TYPES[s.type]}</div><div class="tool-row"><button type="button" class="small" data-act="applyPlace" title="從常用場所帶入地址、樓層、※附註及注意事項（只補空白欄位）">帶入場所資料</button></div></div>
+  <div class="editor-columns"><div class="editor-main">
+  <div class="basic-single-row">${selectEl('type','行程類型',tripRole(s),Object.entries(TRIP_TYPES))}${selectEl('city','縣市',s.city,[['','全部縣市'],...CITIES.map(c=>[c,c])])}${field('place','場所名稱',s.place,{list:'editorPlaceList',ph:'選擇或輸入場所'})}<datalist id="editorPlaceList">${placeOptions(s.city,s.type)}</datalist></div>
+  ${special}
+    <div class="block time-section"><div class="block-title"><h3>時間</h3></div>
+      ${legField||timeField?`<div class="grid-2">${legField}${timeField}</div>`:''}
+      ${expectTip(i)}
+      <div class="sub-title"><span>勤前時間</span><span class="hint">藍字列在時間欄</span></div>
+      ${s.prepTimes.map((p,k)=>`<div class="prep-row"><input data-prep="${k}" data-prep-field="label" value="${esc(p.label)}" list="prepLabelList" aria-label="名稱"><input data-prep="${k}" data-prep-field="time" value="${esc(p.time)}" placeholder="0900" maxlength="4" inputmode="numeric" aria-label="時間"><button type="button" class="small danger" data-prep-del="${k}" aria-label="刪除">×</button></div>`).join('')}
+      <div class="tool-row">${DB.prepLabels.map(l=>`<button type="button" class="small" data-prep-add="${esc(l)}">＋ ${esc(l)}</button>`).join('')}<button type="button" class="small" data-prep-add="依中心勤務命令辦理">＋ 依中心命令</button></div>
+    </div>
+    ${!isRail(s)?`<div class="block route-section"><div class="block-title"><h3>地點</h3><span class="hint">可換行，換行位置照原樣輸出</span></div>
+      <div class="grid-2">${field('placeLines','場所其他行（樓層、廳別）',s.placeLines,{area:true,ph:'3樓宴會廳'})}${field('event','活動名稱（藍字）',s.event,{area:true,ph:'參訪'})}</div>
+      <div class="grid-2">${selectEl('privacy','公開性',s.privacy,[['','不註記'],['不公開','不公開'],['公開','公開']])}${field('people','人數（約）',s.people,{ph:'20'})}</div>
+      ${field('address','地址',s.address,{area:true,rows:2})}
+    </div>`:''}
+  </div><div class="editor-side">
+    <div class="block unit-section">${railSeatingEditor(s)}${s.type==='hsr_depart'?'':lineEditor(s,'rites')}</div>
+    <div class="block contact-section">${advanceEditor(s)}${s.type==='hsr_depart'?'':lineEditor(s,'notes')}</div>
+  </div></div>`;
+}
+function railSeatLabel(name){const chars=[...String(name).trim()];return chars.length>1?chars.slice(1).join(''):chars.join('')}
+function railCarNoteKey(key){return key==='railSeats5'?'railCar5Note':'railCar7Note'}
+function railPassengerText(s,key){return [s[key].map(railSeatLabel).join('、'),String(s[railCarNoteKey(key)]||'').trim()].filter(Boolean).join(' ').toUpperCase()}
+function railCarFlag(key){return key==='railSeats5'?'railCar5On':'railCar7On'}
+function setRailCar(s,key,enabled){if(!['railSeats5','railSeats7'].includes(key))return;s[railCarFlag(key)]=enabled;if(!enabled){s[key]=[];s[railCarNoteKey(key)]=''}sanitizeRailSeats(s)}
+function sanitizeRailSeats(s){
+  if(s.railCar5On===false)s.railSeats5=[];if(s.railCar7On===false)s.railSeats7=[];
+  s.railSeats5=[...new Set((s.railSeats5||[]).filter(n=>!RAIL_SEAT_EXCLUDED.has(n)))];
+  s.railSeats7=[...new Set((s.railSeats7||[]).filter(n=>!RAIL_SEAT_EXCLUDED.has(n)&&!s.railSeats5.includes(n)))];
+}
+function setRailSeat(s,key,name,checked){
+  if(!['railSeats5','railSeats7'].includes(key)||RAIL_SEAT_EXCLUDED.has(name))return;
+  const other=key==='railSeats5'?'railSeats7':'railSeats5';
+  s[railCarFlag(key)]=true;
+  s[key]=s[key].filter(n=>n!==name);
+  if(checked){s[key].push(name);s[other]=s[other].filter(n=>n!==name)}
+  sanitizeRailSeats(s);s.railSeatsOn=true;
+}
+function railSeatingLines(s){sanitizeRailSeats(s);return s.type==='hsr_depart'&&s.railSeatsOn?['6 車：'+RAIL_CAR6_PEOPLE.map(([name,key])=>name+String(s[key]||'').trim()).join('、'),...(s.railCar5On===false?[]:['5 車：'+railPassengerText(s,'railSeats5')]),...(s.railCar7On===false?[]:['7 車：'+railPassengerText(s,'railSeats7')])]:[]}
+function railSeatingEditor(s){
+  if(s.type!=='hsr_depart')return '';
+  sanitizeRailSeats(s);
+  const row=(car,key)=>s[railCarFlag(key)]===false?`<button type="button" class="small" data-add-seat-car="${key}">＋ 加入 ${car} 車</button>`:`<div class="rail-seat-row"><span>${car} 車：</span><input data-rail-free="${key}" value="${esc(railPassengerText(s,key))}" placeholder="輸入人員、座位或備註" aria-label="${car} 車人員與座位" autocomplete="off"><button type="button" class="small danger rail-car-remove" data-remove-seat-car="${key}" aria-label="刪除 ${car} 車" title="刪除 ${car} 車">x</button></div>`;
+  return `<div class="rail-seating"><div class="block-title"><h3>高鐵出發站車廂配置</h3>${toggleEl('railSeatsOn','列入儀節',s.railSeatsOn)}</div><div class="rail-fixed"><span>6 車：</span>${RAIL_CAR6_PEOPLE.map(([name,key])=>`<label class="rail-fixed-person">${name}<input class="rail-seat-number" data-path="${key}" value="${esc(s[key]||'')}" aria-label="${name}座位" placeholder="座位" maxlength="12" autocomplete="off"></label>`).join('')}</div>${row('5','railSeats5')}${row('7','railSeats7')}</div>`;
+}
+function refreshRailSeatingEditor(s){const block=$('editor').querySelector('.rail-seating');if(!block)return;const opened=[...block.querySelectorAll('details[open][data-seat-picker]')].map(el=>el.dataset.seatPicker);block.outerHTML=railSeatingEditor(s);for(const key of opened){const picker=$('editor').querySelector(`[data-seat-picker="${key}"]`);if(picker)picker.open=true}}
+function advanceEditor(s){
+  const all=[...DB.advance.map(a=>a.name),...s.advance.filter(n=>!DB.advance.some(a=>a.name===n))];
+  return `<div class="item-list-title"><h3>先遣</h3>${toggleEl('advancePhone','第一位附電話',s.advancePhone)}</div><div class="chip-grid">${all.map(n=>{const k=s.advance.indexOf(n);return `<button type="button" class="chip ${k>=0?'on':''}" data-chip="advance" data-name="${esc(n)}">${k>=0?`<span class="order">${k+1}</span>`:''}${esc(n)}</button>`}).join('')}</div><div class="add-inline"><input data-add-person="advance" placeholder="其他人員，輸入後按 Enter" autocomplete="off"></div>${isRail(s)?`<label class="toggle deputy">${checkbox('deputyOn',s.deputyOn)}列出「${esc(stationShort(s.place))}值班副站長：${esc(hsrPhone(s.place)||'資料庫未設定')}」</label>`:''}<div class="sub-title"></div>`;
+}
+function toneLabel(key,l){const c=lineColor(key,l);if(key==='notes'&&l.kind==='note')return c==='red'?'待確認':c==='blue'?'已確認':c===''?'一般':'綠字';return {red:'紅',blue:'藍',green:'綠','':'黑'}[c]}
+function lineEditor(s,key){
+  const lines=s[key];let n=0;
+  let h=`<div class="item-list-title"><h3>${key==='rites'?'儀節':'注意事項'}</h3>${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
+  h+=`<div class="phrase-row">${(key==='rites'?DB.ritePhrases:DB.notePhrases).map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}${key==='notes'?DB.contactRoles.map(r=>`<button type="button" class="chip-btn contact" data-role="${esc(r)}">＋${esc(r)}</button>`).join(''):''}</div>`;
+  h+=lines.map((l,i)=>{
+    const tag=l.kind==='step'?(l.text.trim()?(++n)+'.':'#'):l.kind==='note'?'※':l.kind==='contact'?'聯絡':'說明',c=lineColor(key,l);
+    return `<div class="line-row kind-${l.kind} tone-${c||'black'} ${lineBold(key,l)?'bold':''}" data-list="${key}" data-index="${i}"><button type="button" class="line-kind" data-line-act="kind" title="切換類型：${LINE_KINDS[key].map(x=>x[1]).join('／')}">${tag}</button><textarea rows="1" data-line-text="${key}" data-index="${i}" aria-label="${key==='rites'?'儀節':'注意事項'}第 ${i+1} 行">${esc(l.text)}</textarea><div class="line-tools"><button type="button" class="small tone-btn" data-line-act="tone" title="切換顏色"><span class="tone-dot ${c||'black'}"></span>${toneLabel(key,l)}</button>${l.kind==='step'||l.kind==='pre'?`<button type="button" class="small bold-btn ${lineBold(key,l)?'on':''}" data-line-act="bold" title="粗體">粗</button>`:''}<button type="button" class="small" data-line-act="up" ${i===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-line-act="down" ${i===lines.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-line-act="del" aria-label="刪除">×</button></div></div>`;
+  }).join('');
+  if(!lines.length)h+=`<p class="empty-hint">${key==='rites'?'按「＋ 步驟」或點選上方片語開始；可直接貼上整段文字，會自動分行。':'按「＋ ※」新增待確認事項；確認後點「待確認」改為「已確認」（藍字）。'}</p>`;
+  return h;
+}
+function autoGrow(t){t.style.height='auto';t.style.height=Math.max(36,t.scrollHeight+2)+'px'}
+
+// 預覽
+function paraHTML(p){return `<p class="jc-${p.jc}${p.hang?' hang':''}" style="line-height:${(p.line/20*PT).toFixed(1)}px${p.gap?`;margin-top:${(p.gap*3.6*PT).toFixed(1)}px`:''}">${p.runs.map(r=>`<span class="${[r.b?'b':'',r.c?'c-'+r.c:''].join(' ').trim()}">${esc(r.t)}</span>`).join('')||'&nbsp;'}</p>`}
+function previewRender(){
+  const rows=buildModel();
+  let h='<table class="survey"><colgroup><col style="width:11.45%"><col style="width:12.40%"><col style="width:47.52%"><col style="width:28.63%"></colgroup><tbody>';
+  for(const r of rows){
+    const sel=r.id&&r.id===selected?' selected-row':'';
+    if(r.kind==='title')h+=`<tr data-id="global" class="title-row${sel}"><td colspan="4">${r.paras.map(paraHTML).join('')}</td></tr>`;
+    else if(r.kind==='head')h+='<tr class="head-row"><th>時間</th><th>地點</th><th>儀節</th><th>注意事項</th></tr>';
+    else if(r.kind==='span')h+=`<tr data-id="${r.id}" class="span-row${sel}"><td colspan="4"${r.shade?' class="shade"':''}>${r.paras.map(paraHTML).join('')}</td></tr>`;
+    else h+=`<tr data-id="${r.id}" class="${sel.trim()}">`+r.cells.map((c,ci)=>{const vm=r.vmerge?.[ci];if(vm==='cont')return '';return `<td${vm==='restart'?' rowspan="2"':''}>${c.map(paraHTML).join('')||'<p>&nbsp;</p>'}</td>`}).join('')+'</tr>';
+  }
+  $('preview').innerHTML=h+'</tbody></table>';
+  const e=errors(),v=$('validation');
+  v.classList.toggle('ok',!e.length);
+  v.innerHTML=e.length?`<strong>待確認 ${e.length} 項</strong><ul>${e.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<strong>資料完整</strong>沒有缺漏，也沒有「？」或紅字待確認。';
+  updatePending();fitPreview();
+}
+let previewZoom=['fit','100','125','150'].includes(ls.get(KEY.zoom))?ls.get(KEY.zoom):'fit';
+function fitPreview(){
+  const paper=$('preview'),wrap=paper.parentElement;$('previewZoom').value=previewZoom;
+  paper.style.transform='';paper.style.marginRight='';paper.style.marginBottom='';
+  const w=paper.offsetWidth,h=paper.offsetHeight;if(!wrap.clientWidth||!w)return;
+  const scale=previewZoom==='fit'?Math.min(1,wrap.clientWidth/w):Number(previewZoom)/100;
+  if(scale!==1){paper.style.transform=`scale(${scale})`;paper.style.marginRight=(w*(scale-1))+'px';paper.style.marginBottom=(h*(scale-1))+'px'}
+  wrap.style.overflow=scale>1?'auto':'hidden';
+}
+
+// 只更新衍生文字與其他輸入框，不重畫正在輸入的欄位
+function syncInputs(){
+  const act=document.activeElement,g=state.global;
+  for(const el of document.querySelectorAll('[data-path]')){if(el===act||el.type==='checkbox'||el.tagName==='SELECT')continue;const v=pathValue(el.dataset.path)??'';if(el.value!==String(v))el.value=v}
+  for(const el of $('stopList').querySelectorAll('input')){
+    if(el===act)continue;
+    if(el.dataset.side==='origin')el.value=g.origin;
+    else if(el.dataset.side==='depart'){el.value=departOf();el.placeholder='離開'}
+    else if(el.dataset.sidePlace){const s=stopById(el.dataset.sidePlace);if(s)el.value=s.place}
+    else if(el.dataset.sideTime){const s=stopById(el.dataset.sideTime);if(s)el.value=sideTimeValue(s)}
+    else if('returnAt' in el.dataset)el.value=returnTimeOf();
+    else if('returnTo' in el.dataset)el.value=g.returnTo;
+  }
+  for(const el of $('stopList').querySelectorAll('[data-side-time]')){const i=state.stops.findIndex(s=>s.id===el.dataset.sideTime);if(i<0)continue;el.placeholder=sideTimePlaceholder(i);const mm=timeMismatch(i);el.classList.toggle('warn',!!mm);el.title=mm?'與推算抵達 '+mm+' 不符':'抵離時間，例如 1000-1050'}
+  for(const el of $('stopList').querySelectorAll('[data-derived-chip]')){const i=state.stops.findIndex(s=>s.id===el.dataset.derivedChip);if(i>=0)el.innerHTML=legChipText(i)}
+  for(const el of document.querySelectorAll('[data-arrival-transport]')){const s=stopById(el.dataset.arrivalTransport);if(s)el.textContent=transportText(s)||'未填航空公司與航班（Word 不列出）'}
+  const set=(sel,fn)=>{const el=document.querySelector(`[data-derived="${sel}"]`);if(el)fn(el)};
+  set('returnChip',el=>{const rt=returnTimeOf();el.textContent=rt?rt+' 抵':''});
+  set('depart',el=>el.value=departOf());set('prep',el=>el.value=prepOf());
+  set('expect',el=>{const i=state.stops.findIndex(s=>s.id===selected);if(i>=0)el.outerHTML=expectTip(i)});
+  for(const el of document.querySelectorAll('[data-range]')){if(el===act)continue;if(el.dataset.range==='temp')el.value=tempText(g);else{const i=state.stops.findIndex(s=>s.id===selected);if(i>=0){el.value=sideTimeValue(state.stops[i]);el.placeholder=sideTimePlaceholder(i)}}}
+}
+function afterEdit(){syncTravelEstimates();syncInputs();previewRender();saveSoon()}
+function selectStop(id,{scroll=true}={}){
+  if(selected===id)return;selected=id;
+  for(const el of $('stopList').querySelectorAll('[data-select]'))el.classList.toggle('selected',el.dataset.select===id);
+  editorRender();previewRender();
+  if(scroll){const row=$('preview').querySelector(`tr[data-id="${CSS.escape(id)}"]`);row?.scrollIntoView({block:'nearest'})}
+}
+
+// ── 行程操作 ──
+function inferType(s){
+  const before=s.type,i=state.stops.indexOf(s),prev=state.stops[i-1],name=canon(s.place),kind=/^高鐵.+站$/.test(name)?'hsr':/機場$/.test(name)?'air':'';
+  if(!kind)return false;
+  if(s.type==='visit')s.type=prev?.type===kind+'_depart'?kind+'_arrive':kind+'_depart';
+  else s.type=kind+'_'+(isArriveType(s)?'arrive':'depart');
+  return before!==s.type;
+}
+
+const cloneLines=lines=>lines.map(l=>({...l,id:uid()}));
+function applyPlace(s,force){
+  const p=findPlace(s.place);if(!p)return false;let changed=false;
+  if(!s.city&&p.city){s.city=p.city;changed=true}
+  if(!s.address.trim()&&p.address){s.address=p.address;changed=true}
+  if(!s.placeLines.trim()&&p.placeLines){s.placeLines=p.placeLines;changed=true}
+  for(const key of ['rites','notes']){
+    if(!p[key].length)continue;
+    if(!s[key].length){s[key]=cloneLines(p[key]);changed=true}
+    else if(force){const have=new Set(s[key].map(l=>l.text.trim()));const add=p[key].filter(l=>!have.has(l.text.trim()));if(add.length){s[key].push(...cloneLines(add));changed=true}}
+  }
+  return changed;
+}
+function placeCommitted(s){if(!s)return;const p=findPlace(s.place),city=p?.city||guessCity(s.place,s.address),cityChanged=!!city&&s.city!==city;if(city)s.city=city;const fresh=!s.address.trim()&&!s.rites.length&&!s.notes.length;const a=inferType(s),b=fresh?applyPlace(s,false):false;if(a||b||cityChanged){render();saveSoon();if(b)notify('已從常用場所帶入「'+s.place+'」的資料')}}
+function addStop(type){
+  pushUndo();
+  const last=state.stops[state.stops.length-1];
+  if(type==='rail'){const a=blankStop('hsr_depart','高鐵臺北站'),b=blankStop('hsr_arrive','');applyPlace(a,false);a.prepTimes=[{label:'場部',time:''}];b.prepTimes=[{label:'場部',time:''}];state.stops.push(a,b);selected=a.id}
+  else if(type==='air'){const a=blankStop('air_depart',''),b=blankStop('air_arrive','');a.prepTimes=[{label:'場部',time:''}];b.prepTimes=[{label:'場部',time:''}];state.stops.push(a,b);selected=a.id}
+  else{const s=blankStop('visit','');s.prepTimes=[{label:'場檢',time:''},{label:'部署',time:''}];state.stops.push(s);selected=s.id}
+  if(!last&&!state.global.returnMinutes)state.global.returnMinutes='';
+  render();saveSoon();
+  const input=$('editor').querySelector('[data-path="place"]');if(input&&!isMobileLayout())input.focus();
+}
+function moveStop(id,dir){const i=state.stops.findIndex(s=>s.id===id),j=i+dir;if(i<0||j<0||j>=state.stops.length)return;pushUndo();[state.stops[i],state.stops[j]]=[state.stops[j],state.stops[i]];render();saveSoon()}
+function deleteStop(id){const s=stopById(id);if(!s)return;ask('刪除場所？',`確定刪除「${s.place||'未命名場所'}」？可按「復原」還原。`,()=>{pushUndo();state.stops=state.stops.filter(x=>x.id!==id);if(selected===id)selected='global';render();saveSoon()},'刪除')}
+$('addVisit').onclick=()=>addStop('visit');
+$('undoBtn').onclick=undo;
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault();undo()}if(e.key==='Escape'&&document.body.classList.contains('preview-full'))setPreviewFull(false)});
+
+// 側欄事件
+function parseSideTime(s,v){const [a='',d='']=normRange(v).split('-');s.arrive=a.slice(0,4);s.depart=d.slice(0,4);if(s.type==='air_arrive'&&s.arrive)s.flightMinutes=''}
+const digitsOnly=(el,max=4)=>{const v=normDigits(el.value).replace(/\D/g,'').slice(0,max);if(v!==el.value)el.value=v;return v};
+$('stopList').addEventListener('input',e=>{
+  const el=e.target,g=state.global;maybeUndo(el);
+  if(el.dataset.side==='origin')g.origin=el.value;
+  else if(el.dataset.sidePlace){const s=stopById(el.dataset.sidePlace);if(!s)return;if(selected!==s.id)selectStop(s.id,{scroll:false});s.place=el.value}
+  else if(el.dataset.sideTime){const s=stopById(el.dataset.sideTime);if(!s)return;const v=normRange(el.value);if(v!==el.value)el.value=v;parseSideTime(s,v)}
+  else if('returnAt' in el.dataset)g.returnAt=digitsOnly(el);
+  else if('returnTo' in el.dataset)g.returnTo=el.value;
+  else return;
+  afterEdit();
+});
+$('stopList').addEventListener('change',e=>{
+  const el=e.target;
+  if(el.dataset.side==='origin'){const city=originCityOf(state.global.origin);if(city)state.global.originCity=city;if(selected==='global')editorRender();saveSoon();return}
+  if(el.dataset.sideCity){const s=stopById(el.dataset.sideCity);if(s){pushUndo();s.city=el.value;render();saveSoon()}return}
+  if(el.dataset.sidePlace)placeCommitted(stopById(el.dataset.sidePlace));
+  if(el.dataset.sideTime){const s=stopById(el.dataset.sideTime);if(s)el.value=sideTimeValue(s)}
+});
+$('stopList').addEventListener('focusin',e=>{const card=e.target.closest('[data-select]');if(card&&e.target.matches('input,select'))selectStop(card.dataset.select)});
+$('stopList').addEventListener('click',e=>{
+  const open=e.target.closest('[data-open-stop]');if(open){selectStop(open.dataset.openStop);if(isMobileLayout())setMobileView('edit');return}
+  const mv=e.target.closest('[data-stop-move]');if(mv){moveStop(mv.dataset.stopId,mv.dataset.stopMove==='up'?-1:1);return}
+  const del=e.target.closest('[data-stop-delete]');if(del){deleteStop(del.dataset.stopDelete);return}
+  if(e.target.closest('input,select,button'))return;
+  const card=e.target.closest('[data-select]');if(card){selectStop(card.dataset.select);if(isMobileLayout())setMobileView('edit')}
+});
+// 拖曳排序：只有按住卡片上方列才啟動拖曳，避免影響輸入框選字
+let dragId=null;
+$('stopList').addEventListener('pointerdown',e=>{const handle=e.target.closest('[data-drag-handle]');if(handle&&!e.target.closest('button')){const card=handle.closest('[data-drag-stop]');card.draggable=true}});
+$('stopList').addEventListener('dragstart',e=>{const card=e.target.closest('[data-drag-stop]');if(!card)return;dragId=card.dataset.dragStop;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragId)}catch{}});
+$('stopList').addEventListener('dragover',e=>{const card=e.target.closest('[data-drag-stop]');if(!dragId||!card)return;e.preventDefault();const r=card.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;for(const c of $('stopList').querySelectorAll('.drop-before,.drop-after'))c.classList.remove('drop-before','drop-after');if(card.dataset.dragStop!==dragId)card.classList.add(after?'drop-after':'drop-before')});
+$('stopList').addEventListener('drop',e=>{const card=e.target.closest('[data-drag-stop]');if(!dragId||!card)return;e.preventDefault();const target=card.dataset.dragStop;if(target!==dragId){pushUndo();const from=state.stops.findIndex(s=>s.id===dragId),moving=state.stops.splice(from,1)[0];let to=state.stops.findIndex(s=>s.id===target);if(card.classList.contains('drop-after'))to++;state.stops.splice(to,0,moving);render();saveSoon()}dragId=null});
+$('stopList').addEventListener('dragend',()=>{dragId=null;for(const c of $('stopList').querySelectorAll('[data-drag-stop]')){c.draggable=false;c.classList.remove('dragging','drop-before','drop-after')}});
+
+// 編輯區事件
+$('editor').addEventListener('input',e=>{
+  const el=e.target;
+  if(el.dataset.railFree){const key=el.dataset.railFree,s=current();if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;maybeUndo(el);s[key]=[];el.value=el.value.toUpperCase();s[railCarNoteKey(key)]=el.value;s.railSeatsOn=true;const cb=$('editor').querySelector('[data-path="railSeatsOn"]');if(cb)cb.checked=true;afterEdit();return}
+  if(el.dataset.path&&el.type!=='checkbox'&&el.tagName!=='SELECT'){
+    maybeUndo(el);const path=el.dataset.path,[obj,key]=targetOf(path);if(!obj)return;
+    let v=el.value;if(path.startsWith('railSeat6')){v=v.toUpperCase();el.value=v}if(TIME_PATHS.has(path))v=digitsOnly(el,4);else if(NUM_PATHS.has(path))v=digitsOnly(el,5);
+    obj[key]=v;if(path.startsWith('railSeat6')||['railCar5Note','railCar7Note'].includes(path)){obj.railSeatsOn=true;const cb=$('editor').querySelector('[data-path="railSeatsOn"]');if(cb)cb.checked=true}if(path==='arrive'&&obj.type==='air_arrive')obj.flightMinutes='';afterEdit();return;
+  }
+  if(el.dataset.range){maybeUndo(el);const v=normRange(el.value,el.dataset.range==='temp'?2:4);if(v!==el.value)el.value=v;if(el.dataset.range==='temp'){const [lo='',hi='']=v.split('-');state.global.tempLow=lo;state.global.tempHigh=hi}else{const s=current();if(!s||selected==='global')return;parseSideTime(s,v)}afterEdit();return}
+  if(el.dataset.lineText){maybeUndo(el);const s=current(),l=s?.[el.dataset.lineText]?.[+el.dataset.index];if(!l)return;l.text=el.value.replace(/\n/g,' ');autoGrow(el);const row=el.closest('.line-row');if(row&&l.kind==='step'){/* 編號在重畫時更新 */}afterEdit();return}
+  if(el.dataset.prep!==undefined){maybeUndo(el);const s=current(),p=s?.prepTimes[+el.dataset.prep];if(!p)return;p[el.dataset.prepField]=el.dataset.prepField==='time'?digitsOnly(el,4):el.value;afterEdit()}
+});
+$('editor').addEventListener('change',e=>{
+  const el=e.target;if(el.dataset.railSeat){const s=current(),key=el.dataset.railSeat;if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key)||RAIL_SEAT_EXCLUDED.has(el.dataset.seatName))return;pushUndo();setRailSeat(s,key,el.dataset.seatName,el.checked);refreshRailSeatingEditor(s);afterEdit();return}if(el.dataset.weatherRegion!==undefined){pushUndo();const regions=new Set(selectedRegions());if(el.checked)regions.add(el.dataset.weatherRegion);else regions.delete(el.dataset.weatherRegion);state.global.region=[...regions].join('、');el.closest('details').querySelector('summary').textContent=state.global.region||'選擇地區';afterEdit();return}const path=el.dataset.path;if(!path)return;
+  if(el.type==='checkbox'||el.tagName==='SELECT'){
+    pushUndo();const [obj,key]=targetOf(path);if(!obj)return;
+    if(key==='autoDepart'&&!el.checked){obj.autoDepart=true;obj.depart=departOf()||obj.depart}
+    if(key==='autoPrep'&&!el.checked){obj.autoPrep=true;obj.prep=prepOf()||obj.prep}
+    if(key==='type')setTripRole(obj,el.value);else obj[key]=el.type==='checkbox'?el.checked:el.value;
+    render();saveSoon();return;
+  }
+  if(path==='g.origin'){const city=originCityOf(state.global.origin);if(city)state.global.originCity=city;render();saveSoon();return}
+  if(path==='place')placeCommitted(current());
+});
+$('editor').addEventListener('focusout',e=>{if(e.target.dataset.range){const el=e.target;setTimeout(()=>{if(document.activeElement!==el)syncInputs()},0)}});
+$('editor').addEventListener('keydown',e=>{
+  const el=e.target;
+  if(el.dataset.addPerson&&e.key==='Enter'&&!e.isComposing){e.preventDefault();const name=el.value.trim();if(!name)return;pushUndo();const list=el.dataset.addPerson==='advance'?current().advance:state.global[el.dataset.addPerson];if(!list.includes(name))list.push(name);el.value='';render();saveSoon();$('editor').querySelector(`[data-add-person="${el.dataset.addPerson}"]`)?.focus();return}
+  if(el.dataset.lineText&&!e.isComposing){
+    const key=el.dataset.lineText,i=+el.dataset.index,s=current();
+    if(e.key==='Enter'){e.preventDefault();pushUndo();const cur=s[key][i],before=el.value.slice(0,el.selectionStart),after=el.value.slice(el.selectionEnd);cur.text=before;const nl=blankLine(cur.kind,after);s[key].splice(i+1,0,nl);editorRender();previewRender();saveSoon();focusLine(key,i+1,0);return}
+    if(e.key==='Backspace'&&el.value===''&&s[key].length){e.preventDefault();pushUndo();s[key].splice(i,1);editorRender();previewRender();saveSoon();focusLine(key,Math.max(0,i-1),'end');return}
+    if(e.key==='ArrowUp'&&el.selectionStart===0&&i>0){e.preventDefault();focusLine(key,i-1,'end')}
+    if(e.key==='ArrowDown'&&el.selectionEnd===el.value.length&&i<s[key].length-1){e.preventDefault();focusLine(key,i+1,0)}
+  }
+});
+// 貼上多行文字：自動分行並依開頭判斷類型（「1.」步驟、「※」附註、電話號碼為聯絡）
+$('editor').addEventListener('paste',e=>{
+  const el=e.target;if(!el.dataset.lineText)return;
+  const text=(e.clipboardData||window.clipboardData)?.getData('text')||'';if(!/\n/.test(text.trim()))return;
+  e.preventDefault();pushUndo();const key=el.dataset.lineText,i=+el.dataset.index,s=current();
+  const parts=text.replace(/\r/g,'').split('\n').map(t=>t.trim()).filter(Boolean);
+  const lines=parseLinesText(parts.join('\n'),key);
+  const cur=s[key][i];const head=el.value.slice(0,el.selectionStart),tail=el.value.slice(el.selectionEnd);
+  if(!cur.text.trim()&&lines.length){Object.assign(cur,{kind:lines[0].kind,text:lines[0].text});lines.shift()}else{cur.text=head+(lines.shift()?.text||'')}
+  s[key].splice(i+1,0,...lines);if(tail)s[key][i+lines.length].text+=tail;
+  editorRender();previewRender();saveSoon();focusLine(key,i+lines.length,'end');
+});
+function focusLine(key,i,pos){const t=$('editor').querySelector(`textarea[data-line-text="${key}"][data-index="${i}"]`);if(!t)return;t.focus();const p=pos==='end'?t.value.length:pos;t.setSelectionRange(p,p)}
+function parseLinesText(text,key){
+  return String(text||'').split('\n').map(t=>t.trim()).filter(Boolean).map(t=>{
+    if(/^※/.test(t))return blankLine('note',t.replace(/^※\s*/,''));
+    if(key==='rites'&&/^\d{1,2}\s*[.．、]\s*/.test(t))return blankLine('step',t.replace(/^\d{1,2}\s*[.．、]\s*/,''));
+    if(key==='notes'&&/0\d{1,3}-?\d{3,4}-?\d{3,4}/.test(t))return blankLine('contact',t);
+    return blankLine(key==='rites'?'pre':'pre',t);
+  });
+}
+function serializeLines(lines,key){let n=0;return lines.map(l=>l.kind==='step'?`${++n}.${l.text}`:l.kind==='note'?'※'+l.text:l.text).join('\n')}
+let lastLineField=null;
+$('editor').addEventListener('focusin',e=>{if(e.target.dataset.lineText)lastLineField=e.target});
+$('editor').addEventListener('click',e=>{
+  const s=current(),b=e.target.closest('button');if(!b)return;
+  if(b.dataset.removeSeatCar||b.dataset.addSeatCar){const key=b.dataset.removeSeatCar||b.dataset.addSeatCar;if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;pushUndo();setRailCar(s,key,!!b.dataset.addSeatCar);refreshRailSeatingEditor(s);afterEdit();return}
+  if(b.dataset.chip){pushUndo();const name=b.dataset.name,key=b.dataset.chip;
+    if(key==='advance'){const k=s.advance.indexOf(name);if(k>=0)s.advance.splice(k,1);else s.advance.push(name)}
+    else{const g=state.global,list=g[key],on=list.includes(name);const base=key==='residence'?DB.residence:DB.members,extras=list.filter(n=>!base.includes(n));if(on){g[key]=list.filter(n=>n!==name)}else{const set=new Set([...list,name]);g[key]=[...base.filter(n=>set.has(n)),...extras.filter(n=>set.has(n)),...(!base.includes(name)&&!extras.includes(name)?[name]:[])]}}
+    editorRender();previewRender();saveSoon();return}
+  if(b.dataset.prepAdd){pushUndo();s.prepTimes.push({label:b.dataset.prepAdd,time:''});editorRender();previewRender();saveSoon();if(b.dataset.prepAdd!=='依中心勤務命令辦理')$('editor').querySelector(`[data-prep="${s.prepTimes.length-1}"][data-prep-field="time"]`)?.focus();return}
+  if(b.dataset.prepDel!==undefined){pushUndo();s.prepTimes.splice(+b.dataset.prepDel,1);editorRender();previewRender();saveSoon();return}
+  if(b.dataset.lineAdd){pushUndo();const key=b.dataset.lineAdd;s[key].push(blankLine(b.dataset.kind,''));editorRender();previewRender();saveSoon();focusLine(key,s[key].length-1,0);return}
+  if(b.dataset.phrase){pushUndo();const key=b.dataset.phrase,text=b.dataset.text,note=text.startsWith('※');const l=blankLine(key==='notes'||note?'note':'step',text.replace(/^※\s*/,''));s[key].push(l);editorRender();previewRender();saveSoon();const t=$('editor').querySelector(`textarea[data-line-text="${key}"][data-index="${s[key].length-1}"]`);if(t){t.focus();const k=t.value.indexOf('…');if(k>=0)t.setSelectionRange(k,k+1);else t.setSelectionRange(t.value.length,t.value.length)}return}
+  if(b.dataset.role){pushUndo();s.notes.push(blankLine('contact',b.dataset.role+(b.dataset.role.endsWith('人')?'：':'')));editorRender();previewRender();saveSoon();focusLine('notes',s.notes.length-1,'end');return}
+  if(b.dataset.mark){const key=b.dataset.mark;let t=lastLineField?.isConnected&&lastLineField.dataset.lineText===key?lastLineField:null;if(!t){notify('請先點選要標記的那一行');return}const [a,z]=[t.selectionStart,t.selectionEnd];t.setRangeText(z>a?'*'+t.value.slice(a,z)+'*':'*',a,z,'end');t.dispatchEvent(new Event('input',{bubbles:true}));t.focus();return}
+  if(b.dataset.lineAct){
+    const row=b.closest('.line-row'),key=row.dataset.list,i=+row.dataset.index,list=s[key],l=list[i];if(!l)return;pushUndo();
+    const act=b.dataset.lineAct;
+    if(act==='kind'){const kinds=LINE_KINDS[key].map(k=>k[0]);l.kind=kinds[(kinds.indexOf(l.kind)+1)%kinds.length];if(l.kind==='note')l.text=l.text.replace(/^※\s*/,'')}
+    else if(act==='tone'){const order=key==='notes'&&l.kind==='note'?['','blue','black','green']:['','red','blue','green','black'];const k=order.indexOf(l.tone);l.tone=order[(k+1)%order.length]}
+    else if(act==='bold'){l.bold=!lineBold(key,l)}
+    else if(act==='up'&&i>0)[list[i-1],list[i]]=[list[i],list[i-1]];
+    else if(act==='down'&&i<list.length-1)[list[i+1],list[i]]=[list[i],list[i+1]];
+    else if(act==='del')list.splice(i,1);
+    editorRender();previewRender();saveSoon();return;
+  }
+  if(b.dataset.act==='applyPlace'){if(!findPlace(s.place)){notify('常用場所沒有「'+(s.place||'未命名')+'」，可先按「場所存至資料庫」');return}pushUndo();const ok=applyPlace(s,true);render();saveSoon();notify(ok?'已帶入場所資料':'沒有需要補的欄位');return}
+  if(b.dataset.act==='applyExpected'){const i=state.stops.indexOf(s),mm=timeMismatch(i);if(mm){pushUndo();s.arrive=mm;render();saveSoon()}return}
+});
+// 預覽點選回到編輯
+$('preview').addEventListener('click',e=>{const row=e.target.closest('tr[data-id]');if(!row)return;selectStop(row.dataset.id,{scroll:false});const card=$('stopList').querySelector(`[data-select="${CSS.escape(row.dataset.id)}"]`);card?.scrollIntoView({block:'nearest'});if(isMobileLayout())setMobileView('edit')});
+
+// 頁首
+$('headerName').addEventListener('input',e=>{state.name=e.target.value;saveSoon()});
+$('headerDate').addEventListener('input',e=>{pushUndo();state.global.date=e.target.value;previewRender();saveSoon()});
+$('pendingBtn').onclick=()=>{document.body.classList.remove('preview-hidden');$('previewToggle').textContent='收起預覽';if(isMobileLayout())setMobileView('preview');$('validation').scrollIntoView({block:'nearest'});$('validation').animate([{boxShadow:'0 0 0 4px #d9822b'},{boxShadow:'0 0 0 0 #d9822b'}],{duration:900})};
+$('newBtn').onclick=()=>ask('建立空白紀錄？','目前內容會被清除（可先儲存 JSON，或之後按「復原」）。',()=>{pushUndo();state=blankState();selected='global';render();saveSoon()});
+$('demoBtn').onclick=()=>ask('載入示範？','以示範行程取代目前內容（可按「復原」還原）。',()=>{pushUndo();state=demoState();selected=state.stops[0].id;render();saveSoon()});
+$('placeSyncBtn').onclick=archiveDutyHistory;
+
+// 預覽工具列與分隔線
+$('previewZoom').addEventListener('change',e=>{previewZoom=e.target.value;ls.set(KEY.zoom,previewZoom);fitPreview()});
+$('previewToggle').onclick=()=>{const hid=document.body.classList.toggle('preview-hidden');$('previewToggle').textContent=hid?'展開預覽':'收起預覽';if(!hid)requestAnimationFrame(fitPreview)};
+$('previewExpand').onclick=()=>{const on=document.body.classList.toggle('preview-wide');$('previewExpand').textContent=on?'還原':'放大';requestAnimationFrame(fitPreview)};
+function setPreviewFull(on){document.body.classList.toggle('preview-full',on);$('previewFull').textContent=on?'結束滿版（Esc）':'滿版預覽';requestAnimationFrame(fitPreview)}
+$('previewFull').onclick=()=>setPreviewFull(!document.body.classList.contains('preview-full'));
+new ResizeObserver(()=>fitPreview()).observe(document.querySelector('.paper-wrap'));
+(()=>{
+  const sp=$('splitter'),col=document.querySelector('.main-col');let startY=0,startH=0;
+  const setH=h=>{const max=col.clientHeight-160;h=Math.max(140,Math.min(max,h));col.style.setProperty('--preview-h',h+'px');ls.set(KEY.split,String(Math.round(h)));fitPreview()};
+  const saved=Number(ls.get(KEY.split));if(saved)col.style.setProperty('--preview-h',saved+'px');
+  sp.addEventListener('pointerdown',e=>{startY=e.clientY;startH=document.querySelector('.preview-pane').offsetHeight;sp.setPointerCapture(e.pointerId);document.body.classList.remove('preview-wide');$('previewExpand').textContent='放大'});
+  sp.addEventListener('pointermove',e=>{if(sp.hasPointerCapture(e.pointerId))setH(startH-(e.clientY-startY))});
+  sp.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();setH(document.querySelector('.preview-pane').offsetHeight+(e.key==='ArrowUp'?30:-30))}});
+})();
+
+// 手機
+const isMobileLayout=()=>matchMedia('(max-width:700px)').matches;
+function setMobileView(view){document.body.dataset.mobileView=view;for(const b of document.querySelectorAll('[data-mobile-tab]'))b.setAttribute('aria-pressed',String(b.dataset.mobileTab===view));if(view==='preview')requestAnimationFrame(fitPreview);if(isMobileLayout())window.scrollTo({top:0})}
+for(const b of document.querySelectorAll('[data-mobile-tab]'))b.onclick=()=>setMobileView(b.dataset.mobileTab);
+for(const b of document.querySelectorAll('[data-mobile-action]'))b.onclick=()=>{const id=b.dataset.mobileAction;$(id).click();if(id==='addVisit')setMobileView('edit')};
+$('mobileMore').onclick=()=>{const open=document.body.classList.toggle('mobile-more');$('mobileMore').setAttribute('aria-expanded',String(open))};
+
+// 示範資料（虛構場所，不含實際行程）
+function demoState(){
+  const L=(kind,text,o={})=>Object.assign(blankLine(kind,text),o);
+  const s=blankState();s.name='會勘紀錄表示範';
+  Object.assign(s.global,{region:'台北',tempLow:'26',tempHigh:'30',rain:'10',attire:'勤務衫',crew:DB.members.slice(0,6),residence:DB.residence.slice(0,2),returnMinutes:'15'});
+  const a=Object.assign(blankStop('visit','活動場所A'),{legMinutes:'20',arrive:'1000',depart:'1050',placeLines:'3樓會議廳',event:'座談會',privacy:'不公開',people:'80',address:'臺北市○○區\n○○路1段1號',prepTimes:[{label:'場檢',time:'0830'},{label:'部署',time:'0930'}]});
+  a.rites=[L('pre','0930來賓報到'),L('step','蒞臨(○○協會理事長恭迎)，步行進入大廳。'),L('step','搭乘電梯至3樓，進入會議廳就座。'),L('note','主持人開場後恭請永和致詞'),L('step','永和致詞(約10分)。'),L('step','*合影1梯次*(合影畢返座)。'),L('step','專題報告(約20分)。',{bold:false}),L('step','恭送(理事長陪同)。')];
+  a.advance=DB.advance.slice(0,2).map(x=>x.name);a.advancePhone=true;
+  a.notes=[L('contact','主辦○○○0900-000000'),L('note','空車隊？'),L('note','控梯：主梯？隨梯？'),L('note','致詞時使用講桌及手持麥克風。',{tone:'blue'})];
+  const b=Object.assign(blankStop('hsr_depart','高鐵臺北站'),{legMinutes:'20',arrive:'1110',depart:'1121',trainNo:'○○○',trainArr:'1255',prepTimes:[{label:'場部',time:'1040'}]});
+  b.rites=[L('note','備「高鐵站貴賓室」'),L('pre','6車：永和5A、泰安5C')];b.advance=DB.advance.slice(2,3).map(x=>x.name);b.advancePhone=true;
+  const c=Object.assign(blankStop('hsr_arrive','高鐵左營站'),{depart:'1320',prepTimes:[{label:'場部',time:'1225'}]});c.rites=[L('note','備「高鐵站貴賓室」')];c.advance=DB.advance.slice(4,5).map(x=>x.name);
+  const d=Object.assign(blankStop('visit','活動場所B'),{legMinutes:'25',arrive:'1345',depart:'1430',event:'參訪',people:'30',address:'高雄市○○區○○路2號',prepTimes:[{label:'依中心勤務命令辦理',time:''}]});
+  d.rites=[L('step','蒞臨(○○○恭迎)'),L('step','導覽(全程由？？？導覽)。'),L('step','恭送。')];d.notes=[L('note','門票？'),L('note','準備手套、溼紙巾')];
+  const e=Object.assign(blankStop('air_depart','岡山軍用機場'),{legMinutes:'20',flightMinutes:'50',prepTimes:[{label:'場部',time:'1420'}]});
+  const f=Object.assign(blankStop('air_arrive','松山軍用機場'),{prepTimes:[{label:'場部',time:'1510'}]});
+  s.stops=[a,b,c,d,e,f];return migrateTransportFields(s);
+}
+
+// ── Word（.docx）讀寫：用瀏覽器內建的 deflate，不需外部程式庫 ──
+const CRC_TABLE=Uint32Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=n&1?0xEDB88320^(n>>>1):n>>>1;return n>>>0});
+function crc32(bytes){let c=-1;for(const b of bytes)c=CRC_TABLE[(c^b)&255]^(c>>>8);return (c^-1)>>>0}
+async function streamBytes(bytes,stream){return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer())}
+async function makeZip(entries,type){
+  const enc=new TextEncoder(),parts=[],central=[],now=new Date();let offset=0;
+  const time=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xffff,date=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xffff;
+  for(const [name,content] of entries){
+    const raw=typeof content==='string'?enc.encode(content):content,nameBytes=enc.encode(name);
+    let data=raw,method=0;if(typeof CompressionStream!=='undefined'){try{data=await streamBytes(raw,new CompressionStream('deflate-raw'));method=8}catch{data=raw;method=0}}
+    const crc=crc32(raw),head=new DataView(new ArrayBuffer(30)),cen=new DataView(new ArrayBuffer(46));
+    [[0,4,0x04034b50],[4,2,20],[6,2,0x0800],[8,2,method],[10,2,time],[12,2,date],[14,4,crc],[18,4,data.length],[22,4,raw.length],[26,2,nameBytes.length],[28,2,0]].forEach(([o,n,v])=>n===2?head.setUint16(o,v,true):head.setUint32(o,v,true));
+    [[0,4,0x02014b50],[4,2,20],[6,2,20],[8,2,0x0800],[10,2,method],[12,2,time],[14,2,date],[16,4,crc],[20,4,data.length],[24,4,raw.length],[28,2,nameBytes.length],[30,2,0],[32,2,0],[34,2,0],[36,2,0],[38,4,0],[42,4,offset]].forEach(([o,n,v])=>n===2?cen.setUint16(o,v,true):cen.setUint32(o,v,true));
+    parts.push(new Uint8Array(head.buffer),nameBytes,data);central.push(new Uint8Array(cen.buffer),nameBytes);offset+=30+nameBytes.length+data.length;
+  }
+  const size=central.reduce((n,x)=>n+x.length,0),end=new DataView(new ArrayBuffer(22));
+  [[0,4,0x06054b50],[4,2,0],[6,2,0],[8,2,entries.length],[10,2,entries.length],[12,4,size],[16,4,offset],[20,2,0]].forEach(([o,n,v])=>n===2?end.setUint16(o,v,true):end.setUint32(o,v,true));
+  return new Blob([...parts,...central,new Uint8Array(end.buffer)],{type});
+}
+async function readZip(buffer){
+  const buf=new Uint8Array(buffer),v=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);let end=buf.length-22;
+  while(end>=0&&v.getUint32(end,true)!==0x06054b50)end--;if(end<0)throw Error('不是有效的 Word 檔（.docx）；舊版 .doc 請先在 Word 另存為 .docx');
+  const files=new Map();let p=v.getUint32(end+16,true);const count=v.getUint16(end+10,true);
+  for(let i=0;i<count&&v.getUint32(p,true)===0x02014b50;i++){const method=v.getUint16(p+10,true),csize=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),local=v.getUint32(p+42,true),name=new TextDecoder().decode(buf.subarray(p+46,p+46+nl)),start=local+30+v.getUint16(local+26,true)+v.getUint16(local+28,true);files.set(name,{method,data:buf.subarray(start,start+csize)});p+=46+nl+xl+cl}
+  return {has:n=>files.has(n),async text(n){const f=files.get(n);if(!f)throw Error('Word 檔缺少 '+n);if(f.method===0)return new TextDecoder().decode(f.data);if(f.method!==8)throw Error('不支援的 Word 壓縮格式');if(typeof DecompressionStream==='undefined')throw Error('此瀏覽器無法讀取 Word，請改用新版 Chrome、Edge 或 Safari');return new TextDecoder().decode(await streamBytes(f.data,new DecompressionStream('deflate-raw')))}};
+}
+
+// 產生 Word：版面依原紀錄表（A4、標楷體 12pt、雙線外框、欄寬 1195/1295/4961/2989）
+const xmlEsc=s=>String(s).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f￾￿]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KAI='<w:rFonts w:ascii="標楷體" w:eastAsia="標楷體" w:hAnsi="標楷體"/>';
+const COLS=[1195,1295,4961,2989],TBL_W=10440;
+// 中文避頭尾字元（與原紀錄表的 Word 設定相同）
+const NO_BREAK_AFTER='([{£¥‘“‵〈《「『【〔〝︵︷︹︻︽︿﹁﹃﹙﹛﹝（｛',NO_BREAK_BEFORE='!),.:;?]}¢·–—’”•‥…‧′╴、。〉》」』】〕〞︰︱︳︴︶︸︺︼︾﹀﹂﹄﹏﹐﹑﹒﹔﹕﹖﹗﹚﹜﹞！），．：；？］｜｝､';
+function wRun(r,tight){return `<w:r><w:rPr>${KAI}${r.b?'<w:b/><w:bCs/>':''}${r.c?`<w:color w:val="${HEX[r.c]}"/>`:''}${tight?'<w:spacing w:val="-20"/>':''}</w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`}
+function wPara(p,tight=true){return `<w:p><w:pPr><w:spacing w:before="${p.gap*72}" w:line="${p.line}" w:lineRule="exact"/>${p.hang?`<w:ind w:left="${p.hang}" w:hanging="${p.hang}"/>`:''}<w:jc w:val="${p.jc==='both'?'both':p.jc==='left'?'left':'center'}"/><w:rPr>${KAI}</w:rPr></w:pPr>${p.runs.map(r=>wRun(r,tight)).join('')}</w:p>`}
+function wCell(w,paras,o={}){const body=(paras.length?paras:[P([])]).map(p=>wPara(p,o.tight!==false)).join('');return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.vmerge?`<w:vMerge${o.vmerge==='restart'?' w:val="restart"':''}/>`:''}${o.shade?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${body}</w:tc>`}
+function documentXml(){
+  const rows=buildModel().map(r=>{
+    if(r.kind==='title')return `<w:tr><w:trPr><w:trHeight w:val="336"/></w:trPr>${wCell(TBL_W,r.paras,{span:4,tight:false})}</w:tr>`;
+    if(r.kind==='head')return `<w:tr><w:trPr><w:trHeight w:val="209"/></w:trPr>${['時間','地點','儀節','注意事項'].map((t,i)=>wCell(COLS[i],[P([R(t,true)],{line:300})],{tight:false})).join('')}</w:tr>`;
+    if(r.kind==='span')return `<w:tr>${wCell(TBL_W,r.paras,{span:4,shade:r.shade})}</w:tr>`;
+    return `<w:tr>${r.cells.map((c,i)=>wCell(COLS[i],r.vmerge?.[i]==='cont'?[]:c,{vmerge:r.vmerge?.[i]})).join('')}</w:tr>`;
+  }).join('');
+  const b=(side,val)=>`<w:${side} w:val="${val}" w:sz="24" w:space="0" w:color="auto"/>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="${W}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:tbl><w:tblPr><w:tblW w:w="${TBL_W}" w:type="dxa"/><w:tblInd w:w="17" w:type="dxa"/><w:tblBorders>${b('top','thinThickSmallGap')}${b('left','thinThickSmallGap')}${b('bottom','thickThinSmallGap')}${b('right','thickThinSmallGap')}<w:insideH w:val="single" w:sz="6" w:space="0" w:color="auto"/><w:insideV w:val="single" w:sz="6" w:space="0" w:color="auto"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="28" w:type="dxa"/><w:right w:w="28" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/></w:tblPr><w:tblGrid>${COLS.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl><w:p><w:pPr><w:spacing w:line="20" w:lineRule="exact"/></w:pPr></w:p><w:sectPr><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11907" w:h="16840" w:code="9"/><w:pgMar w:top="454" w:right="851" w:bottom="454" w:left="851" w:header="113" w:footer="278" w:gutter="0"/><w:cols w:space="425"/><w:docGrid w:type="lines" w:linePitch="360"/></w:sectPr></w:body></w:document>`;
+}
+function docxEntries(){
+  const iso=new Date().toISOString().replace(/\.\d+Z$/,'Z'),fld=(code,shown)=>`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ${code} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr>${KAI}<w:sz w:val="20"/></w:rPr><w:t>${shown}</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`,ft=t=>`<w:r><w:rPr>${KAI}<w:sz w:val="20"/></w:rPr><w:t>${t}</w:t></w:r>`;
+  const rel='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  return [
+    ['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>'],
+    ['_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rel}/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="${rel}/extended-properties" Target="docProps/app.xml"/></Relationships>`],
+    ['word/_rels/document.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rel}/styles" Target="styles.xml"/><Relationship Id="rId2" Type="${rel}/settings" Target="settings.xml"/><Relationship Id="rId3" Type="${rel}/footer" Target="footer1.xml"/></Relationships>`],
+    ['word/document.xml',documentXml()],
+    ['word/styles.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:eastAsia="標楷體" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:kern w:val="2"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US" w:eastAsia="zh-TW" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr><w:widowControl w:val="0"/></w:pPr><w:rPr><w:kern w:val="2"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`],
+    ['word/settings.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="${W}"><w:defaultTabStop w:val="480"/><w:characterSpacingControl w:val="compressPunctuation"/><w:noLineBreaksAfter w:lang="zh-TW" w:val="${xmlEsc(NO_BREAK_AFTER)}"/><w:noLineBreaksBefore w:lang="zh-TW" w:val="${xmlEsc(NO_BREAK_BEFORE)}"/><w:compat><w:spaceForUL/><w:balanceSingleByteDoubleByteWidth/><w:doNotLeaveBackslashAlone/><w:ulTrailSpace/><w:doNotExpandShiftReturn/><w:adjustLineHeightInTable/><w:useFELayout/><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/><w:compatSetting w:name="overrideTableStyleFontSizeAndJustification" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/><w:compatSetting w:name="enableOpenTypeFeatures" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/><w:compatSetting w:name="doNotFlipMirrorIndents" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/></w:compat><w:themeFontLang w:val="en-US" w:eastAsia="zh-TW"/><w:decimalSymbol w:val="."/><w:listSeparator w:val=","/></w:settings>`],
+    ['word/footer1.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="${W}"><w:p><w:pPr><w:jc w:val="center"/></w:pPr>${ft('第')}${fld('PAGE','1')}${ft('頁，共')}${fld('NUMPAGES','1')}${ft('頁')}</w:p></w:ftr>`],
+    ['docProps/core.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${xmlEsc(rocDateText())}勤務會勘紀錄表</dc:title><dcterms:created xsi:type="dcterms:W3CDTF">${iso}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${iso}</dcterms:modified></cp:coreProperties>`],
+    ['docProps/app.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>會勘紀錄表編輯器</Application></Properties>']
+  ];
+}
+async function buildWord(){return makeZip(docxEntries(),'application/vnd.openxmlformats-officedocument.wordprocessingml.document')}
+function wordFileName(){const d=state.global.date.replaceAll('-','').slice(4)||'未定日期';return `${d}勤務會勘紀錄表.docx`}
+async function doWord(){const b=$('wordBtn');b.disabled=true;b.textContent='產製中…';try{download(await buildWord(),wordFileName());notify('Word 已產製，請以 Word 檢查分頁後使用')}catch(e){notify('產製失敗：'+e.message)}finally{b.disabled=false;b.textContent='下載 Word'}}
+$('wordBtn').onclick=()=>{const e=errors();if(e.length)ask('仍有資料待確認',e.slice(0,12).join('\n')+(e.length>12?`\n…另有 ${e.length-12} 項`:'')+'\n\n是否仍要產製草稿？缺漏處會以紅色「？」標示。',doWord,'仍要產製');else doWord()};
+
+// 匯入舊的會勘紀錄表 Word：依段落與文字顏色還原成可編輯的行程
+const kids=(el,name)=>Array.from(el.children).filter(n=>n.namespaceURI===W&&n.localName===name);
+const wAttr=(el,name)=>el?el.getAttributeNS(W,name)||el.getAttribute('w:'+name)||'':'';
+function toneOfHex(hex){if(!hex||hex==='auto'||!/^[0-9a-f]{6}$/i.test(hex))return '';const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);if(b>140&&r<110&&g<150)return 'blue';if(r>150&&g<110&&b<110)return 'red';if(g>=80&&r<110&&b<110)return 'green';return ''}
+function runProps(r){const rp=kids(r,'rPr')[0],bEl=rp&&kids(rp,'b')[0],bv=wAttr(bEl,'val'),cEl=rp&&kids(rp,'color')[0];return {b:!!bEl&&!['0','false','off'].includes(bv),c:toneOfHex(wAttr(cEl,'val'))}}
+function paragraphLines(p){
+  const lines=[];let cur=[];
+  const walk=el=>{for(const n of el.children){if(n.namespaceURI!==W)continue;const ln=n.localName;if(['del','moveFrom','pPr','rPr','instrText'].includes(ln))continue;if(ln==='r'){const pr=runProps(n);for(const x of n.children){if(x.namespaceURI!==W)continue;if(x.localName==='t')cur.push({t:x.textContent,...pr});else if(x.localName==='br'||x.localName==='cr'){lines.push(cur);cur=[]}else if(x.localName==='tab')cur.push({t:' ',...pr})}}else walk(n)}};
+  walk(p);lines.push(cur);return lines;
+}
+function cellLines(tc){const pr=kids(tc,'tcPr')[0],vm=pr&&kids(pr,'vMerge')[0];if(vm&&wAttr(vm,'val')!=='restart')return [];const out=[];for(const p of kids(tc,'p'))for(const runs of paragraphLines(p)){const text=normDigits(runs.map(r=>r.t).join('')).trim();if(text)out.push({runs:runs.map(r=>({...r,t:normDigits(r.t)})),text})}return out}
+function dominantTone(runs){const n={};for(const r of runs){const len=r.t.replace(/[\s？?※*()（）]/g,'').length;if(len)n[r.c]=(n[r.c]||0)+len}return Object.entries(n).sort((a,b)=>b[1]-a[1])[0]?.[0]||''}
+function mostlyBold(runs){let b=0,all=0;for(const r of runs){const len=r.t.replace(/\s/g,'').length;all+=len;if(r.b)b+=len}return all>0&&b/all>=.5}
+function markedText(runs,lineTone){let out='',red='';const flush=()=>{if(red){out+=/[^？?\s]/.test(red)?'*'+red.trim()+'*':red;red=''}};for(const r of runs){if(r.c==='red'&&lineTone!=='red')red+=r.t;else{flush();out+=r.t}}flush();return out.replace(/\*\s*\*/g,'').trim()}
+const PHONE=/\s*0\d{1,3}-?\d{3,4}-?\d{3,4}/;
+const newAdvance=new Set();
+function parseSurveyTable(rows){
+  const st=blankState(),g=st.global,warn=[];let phase='title',pendingLeg=null,departSeen=false;
+  g.autoDepart=false;g.autoPrep=false;g.escortOn=false;g.escort='';
+  for(const tr of rows){
+    const tcs=kids(tr,'tc'),cells=tcs.map(cellLines),all=cells.flat().map(l=>l.text).join('\n');
+    if(!all.trim())continue;
+    if(phase==='title'){if(/會勘/.test(all)){parseTitle(cells.flat());phase='head'}continue}
+    if(phase==='head'&&/時間/.test(all)&&/儀節/.test(all)){phase='body';continue}
+    if(tcs.length===1){
+      const text=cells[0].map(l=>l.text).join('\n'),leg=text.match(/(車行|步行)時間\s*(\d*)/),esc2=text.match(/座車隨行\s*[-－]\s*([^)）\s]+)/),ret=text.match(/[(（][^()（）]*?(\d{4})?\s*時?\s*返\s*([^)）]+)[)）]/);
+      if(esc2){g.escortOn=true;g.escort=esc2[1]}
+      for(const l of cells[0])if(/本隊/.test(l.text)){const [left,right='']=l.text.split(/寓所(?:值班)?\s*[:：]/);const names=t=>t.split(/[、，,\/／\s]+/).map(x=>x.trim()).filter(Boolean);g.crew=names(left.replace(/^.*?本隊\s*[:：]/,'').replace(/[；;]\s*$/,''));g.residence=names(right)}
+      if(ret){g.returnMinutes=leg?.[2]||'';g.returnTo=longName(ret[2].trim());pendingLeg=null}
+      else if(leg)pendingLeg={mode:leg[1]==='步行'?'walk':'car',minutes:leg[2]||''};
+      continue;
+    }
+    if(tcs.length<4){warn.push('略過一列無法辨識的表格');continue}
+    if(!departSeen&&/離/.test(cells[0].map(l=>l.text).join(''))&&!cells[2].length){
+      departSeen=true;g.depart=(cells[0].map(l=>l.text).join('').match(/\d{4}/)||[''])[0];g.origin=cells[1].map(l=>l.text).join('');g.prep=(cells[3].map(l=>l.text).join('').match(/\d{4}/)||[''])[0];continue;
+    }
+    departSeen=true;st.stops.push(parseStopRow(cells,pendingLeg));pendingLeg=null;
+  }
+  // 相鄰的高鐵站或機場、且中間沒有車行列 → 配成出發／抵達
+  for(let i=0;i<st.stops.length-1;i++){
+    const a=st.stops[i],b=st.stops[i+1],rail=x=>/^高鐵.+站/.test(canon(x.place)),air=x=>/機場/.test(x.place);
+    if(b.legMode!=='none')continue;
+    if(rail(a)&&rail(b)){a.type='hsr_depart';b.type='hsr_arrive';if(!a.trainArr&&timeValid(b.arrive))a.trainArr=b.arrive;b.legMode='car';i++}
+    else if(air(a)&&air(b)){a.type='air_depart';b.type='air_arrive';b.legMode='car';if(!a.flightMinutes&&b.flightMinutes)a.flightMinutes=b.flightMinutes;i++}
+  }
+  for(const s of st.stops){if(s.type==='visit'&&s.trainNo&&/^高鐵/.test(s.place))s.type='hsr_depart';s.legMode='car'}
+  // 原檔時間與推算一致時改回自動，之後改車行時間會連動
+  migrateTransportFields(st);
+  const state0=state;state=st;
+  if(timeValid(g.depart)&&st.stops[0]){g.autoDepart=true;if(departOf()!==g.depart)g.autoDepart=false}
+  else if(!timeValid(g.depart))g.autoDepart=true;
+  if(!timeValid(g.prep)||g.prep===addMin(departOf(),-prepLead()))g.autoPrep=true;
+  st.stops.forEach(s=>{if(!s.city)s.city=findPlace(s.place)?.city||guessCity(s.place,s.address)});
+  state=state0;
+  const md=g.date.replaceAll('-','').slice(4);st.name=(md||'')+'會勘紀錄表';
+  return {state:st,warn};
+  function parseTitle(lines){
+    const t=lines.map(l=>l.text).join('\n'),m=t.match(/(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);if(m)g.date=`${+m[1]+1911}-${pad2(m[2])}-${pad2(m[3])}`;
+    const w=lines.slice(1).map(l=>l.text).join('');g.region=(w.match(/^\s*(.+?)地區/)||[])[1]||'';
+    const tm=w.match(/(\d+)\s*[-－~～]\s*(\d+)\s*度/);if(tm){g.tempLow=tm[1];g.tempHigh=tm[2]}else{const t1=w.match(/(\d+)\s*度/);if(t1)g.tempLow=g.tempHigh=t1[1]}
+    g.rain=(w.match(/降雨\s*(\d+)\s*%/)||[])[1]||'';g.attire=(w.match(/[（(]\s*([^()（）]+?)\s*[)）]\s*$/)||[])[1]||'';
+  }
+}
+function parseStopRow(cells,leg){
+  const s=blankStop();
+  if(leg){s.legMode=leg.mode;s.legMinutes=leg.minutes}else s.legMode='none';
+  const [tc,pc,rc,nc]=cells;
+  // 時間欄
+  let first=tc[0]?.text||'';if(/[-－]$/.test(first)&&tc[1])first+=tc.splice(1,1)[0].text;
+  const tm=first.match(/(\d{3,4})\s*(?:[-－~～]\s*(\d{3,4}))?/);if(tm){s.arrive=tm[1].padStart(4,'0');s.depart=tm[2]?tm[2].padStart(4,'0'):''}
+  for(const l of tc.slice(1)){const m=l.text.match(/^(.*?)\s*(\d{4})?\s*$/);if(m&&(m[1]||m[2]))s.prepTimes.push({label:m[1].trim(),time:m[2]||''})}
+  // 地點欄：第一組粗體為場所、其後的粗體為活動，非粗體為地址
+  const groups=[],address=[];let tone=null;
+  for(const l of pc){
+    const t=l.text;let m;
+    if((m=t.match(/^[(（]?\s*(不公開|公開)\s*[)）]?$/))){s.privacy=m[1];continue}
+    if((m=t.match(/^約\s*([\d,，]+)\s*人$/))){s.people=m[1].replace(/[,，]/g,'');continue}
+    if((m=t.match(/^(.+?)車次\((\d{4}|____)-(\d{4}|____)\)$/))){s.type='hsr_arrive';s.trainNo=m[1]==='____'?'':m[1];if(timeValid(m[3]))s.arrive=m[3];continue}
+    if((m=t.match(/^(立榮航空|華信航空|____)(?:-(.*?))?\((\d{4}|____)-(\d{4}|____)\)$/))){s.type='air_arrive';s.airline=m[1]==='____'?'':m[1];s.flightNo=m[2]||'';if(timeValid(m[4]))s.arrive=m[4];continue}
+    if((m=t.match(/^(\S+?)\s*車次$/))){s.trainNo=m[1];continue}
+    if((m=t.match(/^[(（]\s*(\d{4})\s*[-－~～]\s*(\d{4})\s*[)）]$/))){if(!s.depart)s.depart=m[1];s.trainArr=m[2];continue}
+    if(!mostlyBold(l.runs)&&groups.length){address.push(t);continue}
+    const tn=dominantTone(l.runs);if(!groups.length||tn!==tone){groups.push([]);tone=tn}groups[groups.length-1].push(t);
+  }
+  const placeLines=groups[0]||[];s.place=placeLines[0]||'';s.placeLines=placeLines.slice(1).join('\n');s.event=groups.slice(1).flat().join('\n');s.address=address.join('\n');
+  // 儀節欄
+  for(const l of rc){
+    const t=l.text,tn=dominantTone(l.runs);let m;
+    if((m=t.match(/^飛行時間\s*(\d+)\s*分/))){s.flightMinutes=m[1];continue}
+    if(/^※/.test(t)){const ln=blankLine('note',markedText(l.runs,tn).replace(/^※\s*/,''));ln.tone=tn==='blue'?'':tn==='red'?'red':tn==='green'?'green':'black';s.rites.push(ln);continue}
+    if((m=t.match(/^(\d{1,2})\s*[.．、]\s*/))){const ln=blankLine('step',markedText(l.runs,tn).replace(/^\d{1,2}\s*[.．、]\s*/,''));const firstRun=l.runs.find(r=>r.t.trim());if(firstRun&&!firstRun.b)ln.bold=false;if(tn==='blue')ln.tone='blue';s.rites.push(ln);continue}
+    const ln=blankLine('pre',markedText(l.runs,tn));if(tn&&tn!=='red')ln.tone=tn;if(mostlyBold(l.runs))ln.bold=true;s.rites.push(ln);
+  }
+  // 注意事項欄
+  for(const l of nc){
+    const t=l.text,tn=dominantTone(l.runs);
+    if(/^先遣\s*[:：]/.test(t)){const names=t.replace(/^先遣\s*[:：]\s*/,'').split(/[、，,]/).map(x=>x.trim()).filter(Boolean);s.advancePhone=PHONE.test(names[0]||'');s.advance=names.map(n=>n.replace(PHONE,'').trim()).filter(Boolean);names.forEach(n=>{const ph=(n.match(PHONE)||[''])[0].trim(),nm=n.replace(PHONE,'').trim();if(ph&&nm&&!DB.advance.some(a=>a.name===nm)){DB.advance.push({name:nm,phone:ph});newAdvance.add(nm)}});continue}
+    if(/值班副站長/.test(t)){s.deputyOn=true;continue}
+    if(/^※/.test(t)){const ln=blankLine('note',markedText(l.runs,tn).replace(/^※\s*/,''));ln.tone=tn==='red'?'':tn==='blue'?'blue':tn==='green'?'green':'black';s.notes.push(ln);continue}
+    if(tn==='green'){s.notes.push(blankLine('contact',t));continue}
+    const ln=blankLine('pre',markedText(l.runs,tn));if(tn)ln.tone=tn;if(mostlyBold(l.runs)&&tn!=='red')ln.bold=true;if(!mostlyBold(l.runs)&&tn==='red')ln.bold=false;s.notes.push(ln);
+  }
+  return s;
+}
+async function importWord(file){
+  const zip=await readZip(await file.arrayBuffer()),doc=new DOMParser().parseFromString(await zip.text('word/document.xml'),'application/xml');
+  if(doc.getElementsByTagName('parsererror').length)throw Error('Word 內容無法解析');
+  const table=Array.from(doc.getElementsByTagNameNS(W,'tbl')).find(t=>{const tr=kids(t,'tr')[0];return tr&&/會勘/.test(tr.textContent)});
+  if(!table)throw Error('找不到「勤務會勘紀錄表」表格（第一列需含「會勘」字樣）');
+  return parseSurveyTable(kids(table,'tr'));
+}
+$('importWordBtn').onclick=()=>$('wordFile').click();
+$('wordFile').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{newAdvance.clear();const {state:next,warn}=await importWord(f);if(newAdvance.size){saveDB();warn.push('先遣人員 '+[...newAdvance].join('、')+' 已加入資料庫')}const go=()=>{pushUndo();state=next;selected=state.stops[0]?.id||'global';render();persist();notify(`已匯入「${f.name}」：${state.stops.length} 個場所${warn.length?'（'+warn.join('、')+'）':''}`)};if(state.stops.length)ask('以 Word 內容取代目前紀錄？',`「${f.name}」共 ${next.stops.length} 個場所。目前內容會被取代（可按「復原」還原）。`,go,'匯入');else go()}catch(err){notify('匯入失敗：'+err.message)}});
+
+// ── JSON ──
+async function saveJson(){
+  persist();const name=(safeFileName(state.name)||'會勘紀錄表')+'.json',text=JSON.stringify(state,null,2);
+  if(window.showSaveFilePicker){try{const h=await showSaveFilePicker({suggestedName:name,types:[{description:'會勘紀錄 JSON',accept:{'application/json':['.json']}}]});const w=await h.createWritable();await w.write(text);await w.close();notify('已儲存：'+h.name);return}catch(e){if(e.name==='AbortError')return}}
+  download(new Blob([text],{type:'application/json'}),name);notify('已下載 JSON：'+name);
+}
+async function loadJsonFile(f){
+  const d=JSON.parse(await f.text());
+  if(d?.kind==='survey-editor-database'){ask('匯入資料庫？',`「${f.name}」是常用資料庫備份，要取代本機資料庫嗎？`,()=>{DB=normalizeDB(d);saveDB();render();notify('已匯入資料庫')},'取代資料庫');return}
+  if(!d||!Array.isArray(d.stops))throw Error('不是會勘紀錄 JSON');
+  const go=()=>{pushUndo();state=normalizeState(d);if(!state.name||state.name==='會勘紀錄表')state.name=f.name.replace(/\.json$/i,'');selected=state.stops[0]?.id||'global';render();persist();notify('已讀取：'+f.name)};
+  if(state.stops.length)ask('以 JSON 取代目前紀錄？',`讀取「${f.name}」並取代目前內容（可按「復原」還原）。`,go,'讀取');else go();
+}
+$('saveBtn').onclick=saveJson;$('openJsonBtn').onclick=()=>$('jsonFile').click();
+$('jsonFile').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(f)try{await loadJsonFile(f)}catch(err){notify('讀取失敗：'+err.message)}});
+
+// ── 匯出已校訂 HTML：把目前的常用資料庫寫進 HTML 檔，可直接離線開啟 ──
+function exportCalibratedHTML(){
+  try{const c=CLEAN_DOCUMENT.cloneNode(true),payload={revision:uid(),exportedAt:new Date().toISOString(),database:DB};c.querySelector('#embeddedConfig').textContent=JSON.stringify(payload).replace(/</g,'\\u003c').replace(/[\u2028\u2029]/g,c=>c==='\u2028'?'\\u2028':'\\u2029');download(new Blob(['<!DOCTYPE html>\n',c.outerHTML],{type:'text/html;charset=utf-8'}),`會勘紀錄表編輯器${APP_VERSION}_已校訂_${today()}.html`);notify('已匯出含最新資料庫的 HTML；上線前請用加密封裝工具重新加密');if($('dbDialog').open)dbStatus('已匯出：最新資料庫已內嵌於 HTML。')}catch(e){notify('HTML 匯出失敗：'+e.message)}
+}
+$('htmlExportBtn').onclick=exportCalibratedHTML;
+
+// ── 常用資料庫 ──
+let dbTab='places',dbPlaceId=null,dbSearch='';
+const dbGroupOpen=new Map([['高鐵站',true],['機場',true]]);
+let historyQuery='',historyDateQuery='',historyPage=0,historySelection=null,historyDraft=null;
+function dbStatus(s){$('dbStatus').textContent=s}
+function openDatabase(){dbRender();$('dbDialog').showModal()}
+const lines2text=a=>a.join('\n'),text2lines=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);
+function dbPlacesMarkup(list){const group=(label,items)=>`<details class="db-place-group" data-db-group="${label}" ${dbSearch||dbGroupOpen.get(label)!==false?'open':''}><summary class="db-place-group-title">${label}<span>${items.length}</span></summary><div class="db-transport-grid">${items.map(p=>`<button type="button" class="db-place db-transport-place ${p.id===dbPlaceId?'active':''}" data-db-place="${esc(p.id)}" title="${esc(p.name)}">${esc(label==='高鐵站'?p.name.replace(/^高鐵/,'').replace(/站$/,''):p.name)}</button>`).join('')}</div></details>`;return group('臺北市',list.filter(p=>COMMON_PLACE_NAMES.includes(p.name)))+group('高鐵站',list.filter(p=>/^高鐵/.test(p.name)))}
+function historyDateText(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return '日期未填';const [y,m,d]=date.split('-');return `${Number(y)-1911}年${Number(m)}月${Number(d)}日`}
+function historyMarkup(){
+  const q=canon(historyQuery),all=DB.history.filter(r=>(!historyDateQuery||r.date===historyDateQuery)&&(!q||canon([r.name,r.city,r.stop.address,r.stop.event].join(' ')).includes(q))).sort((a,b)=>b.date.localeCompare(a.date)||a.name.localeCompare(b.name,'zh-Hant'));
+  const pages=Math.max(1,Math.ceil(all.length/20));historyPage=Math.max(0,Math.min(historyPage,pages-1));const list=all.slice(historyPage*20,historyPage*20+20);
+  const r=historySelection==='new'?historyDraft:DB.history.find(r=>r.id===historySelection),p=r?.stop;
+  return `<div class="db-layout"><nav class="db-list"><input id="historySearch" placeholder="搜尋地點、縣市、活動或地址" value="${esc(historyQuery)}"><label class="field"><span>勤務日期篩選</span><input id="historyDateFilter" type="date" value="${esc(historyDateQuery)}"></label><div class="tool-row"><button type="button" class="small" data-history-action="new">＋ 新增地點</button><button type="button" class="small" data-history-action="archive">存入目前行程</button></div><span class="hint">共 ${all.length} 筆</span>${list.map(r=>`<button type="button" class="db-place ${r.id===historySelection?'active':''}" data-history-id="${esc(r.id)}">${esc(r.name)}<small>${esc(historyDateText(r.date)+(r.city?' · '+r.city:''))}</small></button>`).join('')||'<p class="empty-hint">尚無符合的歷年勤務地點。</p>'}<div class="tool-row history-pager"><button type="button" class="small" data-history-page="-1" ${historyPage===0?'disabled':''}>上一頁</button><span class="hint">${historyPage+1} / ${pages}</span><button type="button" class="small" data-history-page="1" ${historyPage===pages-1?'disabled':''}>下一頁</button></div></nav><div class="db-edit">${r?`<div class="grid-2"><label class="field"><span>勤務日期（可後補）</span><input id="historyDate" type="date" value="${esc(r.date)}"></label><label class="field"><span>縣市</span><select id="historyCity">${cityOptions(r.city,'未分類')}</select></label></div><label class="field"><span>地點名稱</span><input id="historyName" value="${esc(r.name)}"></label><div class="grid-2"><label class="field"><span>地址</span><textarea id="historyAddress">${esc(p.address)}</textarea></label><label class="field"><span>場所其他行（樓層、廳別）</span><textarea id="historyLines">${esc(p.placeLines)}</textarea></label></div><label class="field"><span>活動名稱</span><input id="historyEvent" value="${esc(p.event)}"></label><label class="field"><span>儀節（可換行）</span><textarea id="historyRites">${esc(serializeLines(p.rites,'rites'))}</textarea></label><label class="field"><span>注意事項（可換行）</span><textarea id="historyNotes">${esc(serializeLines(p.notes,'notes'))}</textarea></label><div class="db-save-row"><button type="button" class="small danger" data-history-action="delete" ${historySelection==='new'?'disabled':''}>刪除此筆</button><button type="button" data-history-action="save">儲存</button><button type="button" class="primary" data-history-action="use" ${historySelection==='new'?'disabled':''}>＋ 新增為行程</button></div><p class="hint">帶入地點、地址、儀節及注意事項；新行程的日期與時間另填。</p>`:'<p class="empty-hint">選擇一筆歷年勤務地點，或將目前行程存入資料庫。</p>'}</div></div>`;
+}
+function archiveDutyHistory(){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(state.global.date)){notify('請先填寫勤務日期');return}
+  const stops=state.stops.filter(s=>s.place.trim());if(!stops.length){notify('目前沒有可存入的行程地點');return}
+  let added=0,updated=0;
+  for(const stop of stops){const existing=DB.history.find(r=>r.date===state.global.date&&canon(r.name)===canon(stop.place));const r=normalizeHistoryRecord({id:existing?.id||uid(),date:state.global.date,name:stop.place,city:stop.city,origin:state.global.origin,stop:clone(stop)});if(existing){DB.history[DB.history.indexOf(existing)]=r;updated++}else{DB.history.push(r);added++}}
+  saveDB();if(dbTab==='history')dbRender();const message=`歷年勤務地點：新增 ${added} 筆${updated?'、更新 '+updated+' 筆':''}`;dbStatus(message);notify(message);
+}
+function saveHistoryForm(){
+  const old=historySelection==='new'?historyDraft:DB.history.find(r=>r.id===historySelection);if(!old)return;
+  const name=$('historyName').value.trim(),date=$('historyDate').value;if(!name){dbStatus('請填寫地點名稱');return}if(date&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){dbStatus('勤務日期格式不正確');return}
+  if(DB.history.some(r=>r.id!==old.id&&r.date===date&&canon(r.name)===canon(name))){dbStatus('同日同地點已有資料，請選取該筆修改');return}
+  const r=normalizeHistoryRecord({...old,name,date,city:$('historyCity').value,stop:{...old.stop,place:name,city:$('historyCity').value,address:$('historyAddress').value,placeLines:$('historyLines').value,event:$('historyEvent').value,rites:parseLinesText($('historyRites').value,'rites'),notes:parseLinesText($('historyNotes').value,'notes')}});
+  const index=DB.history.findIndex(x=>x.id===r.id);if(index<0)DB.history.push(r);else DB.history[index]=r;historySelection=r.id;historyDraft=null;saveDB();dbRender();dbStatus('已儲存「'+name+'」');
+}
+function addHistoryToTrip(id){const r=DB.history.find(r=>r.id===id);if(!r)return;pushUndo();const s=blankStop('visit',r.name);for(const key of ['city','address','placeLines','event','privacy','people','rites','notes','advance','advancePhone','deputyOn'])s[key]=clone(r.stop[key]);if(!state.stops.length&&canon(r.origin)===canon(state.global.origin))s.legMinutes=r.stop.legMinutes;state.stops.push(s);inferType(s);selected=s.id;$('dbDialog').close();render();saveSoon();if(isMobileLayout())setMobileView('edit');notify('已新增「'+r.name+'」到行程')}
+function dbRender(){
+  for(const b of document.querySelectorAll('[data-db-tab]'))b.setAttribute('aria-selected',String(b.dataset.dbTab===dbTab));
+  const c=$('dbContent');
+  if(dbTab==='places'){
+    const list=DB.places.filter(p=>!dbSearch||canon(p.name).includes(canon(dbSearch))||canon(p.address).includes(canon(dbSearch)));
+    const p=DB.places.find(x=>x.id===dbPlaceId);
+    c.innerHTML=`<div class="db-layout"><nav class="db-list"><input id="dbSearch" placeholder="搜尋場所或地址" value="${esc(dbSearch)}">${dbPlacesMarkup(list)}</nav>
+    <div class="db-edit">${p?`<div class="grid-2"><label class="field"><span>場所名稱</span><input id="dbpName" value="${esc(p.name)}" readonly></label><label class="field"><span>縣市</span><select id="dbpCity" disabled>${cityOptions(p.city,'未分類')}</select></label></div>${/^高鐵/.test(p.name)?`<label class="field"><span>值班副站長電話</span><input id="dbpDeputy" data-db-hsr="${esc(p.name)}" value="${esc(hsrPhone(p.name))}" placeholder="09xx-xxxxxx"></label>`:`<div class="grid-2"><label class="field"><span>地址（可換行）</span><textarea id="dbpAddress">${esc(p.address)}</textarea></label><label class="field"><span>場所其他行（樓層、廳別）</span><textarea id="dbpLines">${esc(p.placeLines)}</textarea></label></div>`}<label class="field"><span>儀節預設行（「※」開頭為附註、「1.」開頭為步驟）</span><textarea id="dbpRites">${esc(serializeLines(p.rites,'rites'))}</textarea></label><label class="field"><span>注意事項預設行（「※」開頭為待確認事項、含電話者為聯絡人）</span><textarea id="dbpNotes">${esc(serializeLines(p.notes,'notes'))}</textarea></label><div class="db-save-row"><button type="button" class="primary" id="dbpSave">儲存此場所</button></div><p class="hint">新增場所或輸入場所名稱後，空白的地址、樓層、儀節與注意事項會自動帶入；已手動填寫的內容不會被覆蓋。</p>`:'<p class="empty-hint">請從左側選擇或新增常用場所。也可以在行程填好後按頁首的「場所存至資料庫」。</p>'}</div></div>`;
+  }else if(dbTab==='history'){
+    c.innerHTML=historyMarkup();
+  }else if(dbTab==='people'){
+    c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
+  }else if(dbTab==='phrases'){
+    const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
+    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('ritePhrases','儀節片語')}${box('notePhrases','注意事項片語')}${box('contactRoles','聯絡人稱謂')}${box('prepLabels','勤前時間名稱')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
+  }else{
+    c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
+  }
+}
+for(const b of document.querySelectorAll('[data-db-tab]'))b.onclick=()=>{dbTab=b.dataset.dbTab;dbRender()};
+$('databaseBtn').onclick=openDatabase;$('dbClose').onclick=()=>{$('dbDialog').close();render()};
+$('dbContent').addEventListener('toggle',e=>{if(e.target.dataset.dbGroup)dbGroupOpen.set(e.target.dataset.dbGroup,e.target.open)},true);
+$('dbContent').addEventListener('input',e=>{if(e.target.id==='historySearch'){historyQuery=e.target.value;historyPage=0;const pos=e.target.selectionStart;dbRender();const el=$('historySearch');el.focus();el.setSelectionRange(pos,pos);return}if(e.target.id==='dbSearch'){dbSearch=e.target.value;const pos=e.target.selectionStart;dbRender();const s=$('dbSearch');s.focus();s.setSelectionRange(pos,pos)}});
+$('dbContent').addEventListener('change',e=>{
+  const el=e.target;if(el.id==='historyDateFilter'){historyDateQuery=el.value;historyPage=0;dbRender();return}let done=true;
+  if(el.dataset.dbList){const v=text2lines(el.value);DB[el.dataset.dbList]=['members','residence','escorts'].includes(el.dataset.dbList)?[...new Set(v)]:v}
+  else if('dbAdvance' in el.dataset)DB.advance=text2lines(el.value).map(t=>{const m=t.match(/^(.+?)\s*(0[\d-]{6,})?$/);return {name:(m?.[1]||t).trim(),phone:(m?.[2]||'').trim()}});
+  else if(el.dataset.dbSetting)DB.settings[el.dataset.dbSetting]=el.dataset.dbSetting==='prepLead'?(minutesOf(el.value)??15):el.value.trim();
+  else if(el.dataset.dbHsr)DB.hsr[el.dataset.dbHsr]=el.value.trim();
+  else if('dbShort' in el.dataset)DB.shortNames=text2lines(el.value).map(t=>t.split(/[=＝]/).map(x=>x.trim())).filter(p=>p[0]).map(p=>[p[0],p[1]||p[0]]);
+  else done=false;
+  if(done){if(el.dataset.dbList==='escorts'){if(!DB.escorts.includes(DB.settings.escort))DB.settings.escort=DB.escorts[0]||'';dbRender()}saveDB();dbStatus('已儲存（本機）。要寫回 HTML 檔請按「匯出已校訂 HTML」。')}
+});
+$('dbContent').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.historyId){historySelection=b.dataset.historyId;historyDraft=null;dbRender();return}
+  if(b.dataset.historyPage){historyPage+=Number(b.dataset.historyPage);dbRender();return}
+  if(b.dataset.historyAction){const action=b.dataset.historyAction;
+    if(action==='new'){historyDraft=normalizeHistoryRecord({id:uid(),date:state.global.date,name:'新地點',stop:{place:'新地點'}});historyDraft.name='';historyDraft.stop.place='';historySelection='new';dbRender();$('historyName').focus()}
+    if(action==='archive')archiveDutyHistory();
+    if(action==='save')saveHistoryForm();
+    if(action==='use')addHistoryToTrip(historySelection);
+    if(action==='delete'){const r=DB.history.find(r=>r.id===historySelection);if(r)ask('刪除歷年勤務地點？','刪除「'+historyDateText(r.date)+' '+r.name+'」？',()=>{DB.history=DB.history.filter(x=>x.id!==r.id);historySelection=null;saveDB();dbRender();dbStatus('已刪除')},'刪除')}
+    return;
+  }
+  if(b.dataset.dbPlace){dbPlaceId=b.dataset.dbPlace;dbRender();return}
+  if(b.id==='dbAddPlace'){const p=normalizePlace({name:'新場所'});DB.places.unshift(p);dbPlaceId=p.id;saveDB();dbRender();$('dbpName').select();return}
+  if(b.id==='dbpSave'){const p=DB.places.find(x=>x.id===dbPlaceId);if(!p)return;const name=$('dbpName').value.trim();if(!name){dbStatus('場所名稱不可空白');return}const dup=DB.places.find(x=>x!==p&&canon(x.name)===canon(name));if(dup){dbStatus('已有同名場所：'+name);return}if(![...COMMON_PLACE_NAMES,...IMPORTED_HSR_NAMES].includes(name)){dbStatus('常用場所保留臺北市三個場所及全臺高鐵站');return}Object.assign(p,{name,city:COMMON_PLACE_NAMES.includes(name)?'臺北市':guessCity(name,p.address),address:$('dbpAddress')?.value??p.address,placeLines:$('dbpLines')?.value??p.placeLines,rites:parseLinesText($('dbpRites').value,'rites'),notes:parseLinesText($('dbpNotes').value,'notes')});if(/^高鐵/.test(name))DB.hsr[name]=$('dbpDeputy').value.trim();saveDB();dbRender();dbStatus('已儲存「'+name+'」');return}
+  if(b.id==='dbpDelete'){const p=DB.places.find(x=>x.id===dbPlaceId);if(!p)return;$('dbDialog').close();ask('刪除常用場所？',`確定刪除「${p.name}」？`,()=>{DB.places=DB.places.filter(x=>x!==p);dbPlaceId=null;saveDB();openDatabase();dbStatus('已刪除')},'刪除');$('cancelConfirm').addEventListener('click',()=>openDatabase(),{once:true})}
+});
+$('dbHtmlExport').onclick=exportCalibratedHTML;
+$('dbExport').onclick=()=>{download(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}),`會勘資料庫_${today()}.json`);dbStatus('已下載資料庫備份')};
+$('dbImport').onclick=()=>$('dbFile').click();
+$('dbFile').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d?.kind!=='survey-editor-database')throw Error('不是會勘資料庫備份');DB=normalizeDB(d);saveDB();dbPlaceId=null;dbRender();dbStatus(`已匯入：常用場所 ${DB.places.length} 筆`)}catch(err){dbStatus('匯入失敗：'+err.message)}});
+
+// ── 雲端儲存：透過 GitHub API 讀寫私人 repo（權杖只存在本機瀏覽器）──
+let cloudCfg=(()=>{try{return JSON.parse(ls.get(CLOUD_KEY)||'{}')||{}}catch{return {}}})(),cloudFiles=[],cloudBusy=false;
+const cloudReady=()=>!!(cloudCfg.token&&cloudCfg.repo);
+function cloudStatus(s){$('cloudStatus').textContent=s||''}
+function cloudStoreCfg(){ls.set(CLOUD_KEY,JSON.stringify(cloudCfg));$('cloudBtn').classList.toggle('cloud-on',cloudReady())}
+function cloudB64(text){const bytes=new TextEncoder().encode(text);let bin='';for(let i=0;i<bytes.length;i+=8192)bin+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(bin)}
+const cloudSize=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+async function cloudApi(path,opt={}){
+  if(!cloudReady())throw Error('請先在「連線設定」貼上權杖');
+  const url='https://api.github.com/repos/'+cloudCfg.repo+(path===null?'':'/contents/'+path.split('/').map(encodeURIComponent).join('/'));let res;
+  try{res=await fetch(url,{method:opt.method||'GET',cache:'no-store',headers:{Authorization:'Bearer '+cloudCfg.token,Accept:opt.raw?'application/vnd.github.raw+json':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})},body:opt.body?JSON.stringify(opt.body):undefined})}catch{throw Error('網路連線失敗，請確認可以連上網路')}
+  if(res.ok)return opt.raw?res.text():res.status===204?null:res.json();
+  let msg='';try{msg=(await res.json()).message||''}catch{}
+  const err=Error(res.status===401?'權杖無效或已過期，請重新產生權杖':res.status===404?(path===null?'找不到資料 repo，或權杖沒有這個 repo 的權限':'雲端找不到這個檔案'):res.status===409?'雲端檔案已在其他裝置更新，請按「重新整理」後再試':res.status===403?(/rate limit/i.test(msg)?'GitHub 使用次數暫時超過上限，請稍後再試':'權杖沒有寫入權限（Contents 需設為 Read and write）'):'GitHub 回應錯誤 '+res.status+(msg?'：'+msg:''));
+  err.status=res.status;throw err;
+}
+async function cloudRun(label,fn){if(cloudBusy)return;cloudBusy=true;for(const b of $('cloudDialog').querySelectorAll('button:not(#cloudClose)'))b.disabled=true;cloudStatus(label+'…');try{await fn()}catch(e){cloudStatus(label+'失敗：'+e.message)}finally{cloudBusy=false;for(const b of $('cloudDialog').querySelectorAll('button'))b.disabled=false;cloudRenderState()}}
+function cloudRenderState(){const ready=cloudReady();for(const id of ['cloudSaveTrip','cloudUploadFiles','cloudRefresh','cloudUpLib','cloudDownLib'])$(id).disabled=!ready||cloudBusy;$('cloudForget').disabled=!cloudCfg.token||cloudBusy;$('cloudLock').hidden=!ls.get(UNLOCK_KEY)}
+function cloudListRender(){if(!cloudReady()){$('cloudList').innerHTML='<div class="cloud-empty">尚未連線。請先展開「連線設定」貼上權杖。</div>';return}$('cloudList').innerHTML=cloudFiles.length?cloudFiles.map(f=>`<div class="cloud-row"><span class="cloud-name" title="${esc(f.name)}">${esc(f.name.replace(/\.json$/i,''))}</span><span class="cloud-size">${cloudSize(f.size)}</span><button type="button" class="small" data-cloud-load="${esc(f.name)}">讀取</button><button type="button" class="small danger" data-cloud-del="${esc(f.name)}">刪除</button></div>`).join(''):'<div class="cloud-empty">雲端還沒有會勘 JSON。</div>'}
+async function cloudLoadList(){try{const items=await cloudApi(CLOUD_DIR);cloudFiles=(Array.isArray(items)?items:[]).filter(f=>f.type==='file'&&/\.json$/i.test(f.name)).map(f=>({name:f.name,path:f.path,sha:f.sha,size:f.size})).sort((a,b)=>b.name.localeCompare(a.name,'zh-Hant'))}catch(e){if(e.status===404){await cloudApi(null);cloudFiles=[]}else throw e}cloudListRender()}
+const cloudPut=(path,text,message,sha)=>cloudApi(path,{method:'PUT',body:{message,content:cloudB64(text),...(sha?{sha}:{})}});
+async function cloudSaveTrip(){
+  persist();const name=(safeFileName(state.name)||'會勘紀錄表')+'.json',text=JSON.stringify(state,null,2);
+  await cloudRun('讀取雲端清單',cloudLoadList);const existing=cloudFiles.find(f=>f.name===name);
+  const doSave=()=>cloudRun('儲存紀錄',async()=>{const fresh=existing?await cloudApi(CLOUD_DIR+'/'+name).catch(e=>{if(e.status===404)return null;throw e}):null;await cloudPut(CLOUD_DIR+'/'+name,text,(fresh?'更新':'新增')+'會勘紀錄：'+name,fresh?.sha);await cloudLoadList();cloudStatus('已儲存到雲端：'+name);notify('已儲存到雲端：'+name)});
+  if(existing){$('cloudDialog').close();ask('覆蓋雲端紀錄？',`雲端已有「${name}」，要以目前內容覆蓋嗎？（GitHub 會保留舊版本紀錄）`,()=>{$('cloudDialog').showModal();doSave()},'覆蓋')}else await doSave();
+}
+for(const [id,fn] of Object.entries({
+  cloudConnect:()=>{cloudCfg={token:$('cloudToken').value.trim(),repo:$('cloudRepo').value.trim().replace(/^https:\/\/github\.com\//,'').replace(/\/$/,'')};cloudStoreCfg();cloudRun('測試連線',async()=>{await cloudApi(null);await cloudLoadList();await cloudLibInfo();$('cloudSetup').open=false;cloudStatus('連線成功')})},
+  cloudForget:()=>{cloudCfg={repo:cloudCfg.repo};cloudStoreCfg();$('cloudToken').value='';cloudFiles=[];cloudListRender();cloudRenderState();cloudStatus('已清除此裝置的權杖')},
+  cloudSaveTrip:()=>cloudSaveTrip(),
+  cloudRefresh:()=>cloudRun('重新整理',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')}),
+  cloudUploadFiles:()=>$('cloudFileInput').click(),
+  cloudUpLib:()=>cloudRun('上傳資料庫',async()=>{const meta=await cloudLibInfo();await cloudPut(CLOUD_LIB,JSON.stringify({kind:'survey-editor-cloud-library',version:1,savedAt:new Date().toISOString(),database:DB}),'更新會勘資料庫',meta?.sha);await cloudLibInfo();cloudStatus(`已上傳資料庫：常用場所 ${DB.places.length} 筆`)}),
+  cloudDownLib:()=>cloudRun('下載資料庫',async()=>{const d=JSON.parse(await cloudApi(CLOUD_LIB,{raw:true}));if(d?.kind!=='survey-editor-cloud-library')throw Error('雲端檔案不是會勘資料庫');const db=normalizeDB(d.database),when=d.savedAt?new Date(d.savedAt).toLocaleString('zh-TW',{hour12:false}):'未知';$('cloudDialog').close();ask('以雲端資料庫取代本機？',`雲端版本（${when}）：常用場所 ${db.places.length} 筆。本機目前 ${DB.places.length} 筆，將被取代。`,()=>{DB=db;saveDB();render();notify('已套用雲端資料庫')},'取代')}),
+  cloudLock:()=>{ls.del(UNLOCK_KEY);cloudRenderState();cloudStatus('已鎖定：下次開啟需重新輸入密碼')},
+  cloudClose:()=>$('cloudDialog').close()
+}))$(id).onclick=fn;
+async function cloudLibInfo(){try{const meta=await cloudApi(CLOUD_LIB);$('cloudLibInfo').textContent='雲端資料庫：'+cloudSize(meta.size);return meta}catch(e){if(e.status===404){$('cloudLibInfo').textContent='雲端還沒有會勘資料庫，請先上傳一次。';return null}throw e}}
+$('cloudList').addEventListener('click',e=>{
+  const load=e.target.closest('[data-cloud-load]'),del=e.target.closest('[data-cloud-del]');
+  if(load)cloudRun('讀取紀錄',async()=>{const name=load.dataset.cloudLoad,text=await cloudApi(CLOUD_DIR+'/'+name,{raw:true});$('cloudDialog').close();await loadJsonFile(new File([text],name,{type:'application/json'}))});
+  if(del){const f=cloudFiles.find(x=>x.name===del.dataset.cloudDel);if(!f)return;$('cloudDialog').close();ask('刪除雲端紀錄？',`確定刪除雲端的「${f.name}」？（GitHub 仍會保留歷史版本）`,()=>{$('cloudDialog').showModal();cloudRun('刪除',async()=>{await cloudApi(f.path,{method:'DELETE',body:{message:'刪除會勘紀錄：'+f.name,sha:f.sha}});await cloudLoadList();cloudStatus('已刪除：'+f.name)})},'刪除')}
+});
+$('cloudFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;cloudRun('上傳 JSON',async()=>{await cloudLoadList();let n=0;for(const f of files){const text=await f.text();const d=JSON.parse(text);if(!Array.isArray(d?.stops))throw Error(f.name+' 不是會勘紀錄 JSON');const name=safeFileName(f.name.replace(/\.json$/i,''))+'.json',old=cloudFiles.find(x=>x.name===name);await cloudPut(CLOUD_DIR+'/'+name,text,'上傳會勘紀錄：'+name,old?.sha);n++}await cloudLoadList();cloudStatus(`已上傳 ${n} 個檔案`)})});
+$('cloudBtn').onclick=()=>{$('cloudToken').value=cloudCfg.token||'';$('cloudRepo').value=cloudCfg.repo||'comfort527/road-table-data';$('cloudSetup').open=!cloudReady();cloudStatus('');cloudRenderState();cloudListRender();$('cloudDialog').showModal();if(cloudReady())cloudRun('讀取雲端清單',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')})};
+
+// ── 啟動 ──
+cloudStoreCfg();renderDatalists();render();
+if(!state.stops.length&&!ls.get(KEY.data))notify('可按「匯入舊 Word」讀入以前的會勘紀錄表，或按「載入示範」看看完整範例');
+
+</script></body></html>
