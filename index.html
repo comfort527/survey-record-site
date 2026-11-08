@@ -1542,12 +1542,60 @@ for(const [id,fn] of Object.entries({
   cloudSaveTrip:()=>cloudSaveTrip(),
   cloudRefresh:()=>cloudRun('重新整理',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')}),
   cloudUploadFiles:()=>$('cloudFileInput').click(),
-  cloudUpLib:()=>cloudRun('上傳資料庫',async()=>{const meta=await cloudLibInfo();await cloudPut(CLOUD_LIB,JSON.stringify({kind:'survey-editor-cloud-library',version:1,savedAt:new Date().toISOString(),database:DB}),'更新會勘資料庫',meta?.sha);await cloudLibInfo();cloudStatus(`已上傳資料庫：常用場所 ${DB.places.length} 筆`)}),
-  cloudDownLib:()=>cloudRun('下載資料庫',async()=>{const d=JSON.parse(await cloudApi(CLOUD_LIB,{raw:true}));if(d?.kind!=='survey-editor-cloud-library')throw Error('雲端檔案不是會勘資料庫');const db=normalizeDB(d.database),when=d.savedAt?new Date(d.savedAt).toLocaleString('zh-TW',{hour12:false}):'未知';$('cloudDialog').close();ask('以雲端資料庫取代本機？',`雲端版本（${when}）：常用場所 ${db.places.length} 筆。本機目前 ${DB.places.length} 筆，將被取代。`,()=>{DB=db;saveDB();render();notify('已套用雲端資料庫')},'取代')}),
+  cloudUpLib:()=>cloudRun('上傳資料庫',cloudUploadLib),
+  cloudDownLib:()=>cloudRun('下載資料庫',cloudDownloadLib),
   cloudLock:()=>{ls.del(UNLOCK_KEY);cloudRenderState();cloudStatus('已鎖定：下次開啟需重新輸入密碼')},
   cloudClose:()=>$('cloudDialog').close()
 }))$(id).onclick=fn;
-async function cloudLibInfo(){try{const meta=await cloudApi(CLOUD_LIB);$('cloudLibInfo').textContent='雲端資料庫：'+cloudSize(meta.size);return meta}catch(e){if(e.status===404){$('cloudLibInfo').textContent='雲端還沒有會勘資料庫，請先上傳一次。';return null}throw e}}
+// ── 資料庫雲端同步：記住上次同步的雲端版本（基準），上傳／下載時三方合併，避免互相覆蓋 ──
+const DB_BASE_KEY='survey-editor-v1:db-cloud-base';
+const stableJson=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x);
+function cloudBase(){try{const b=JSON.parse(ls.get(DB_BASE_KEY)||'null');return b&&b.repo===cloudCfg.repo?b:null}catch{return null}}
+function setCloudBase(sha,db){if(!ls.set(DB_BASE_KEY,JSON.stringify({repo:cloudCfg.repo,sha,db})))notify('同步紀錄暫存失敗，下次上傳前請先下載資料庫')}
+function dbDirty(){const b=cloudBase();return !b||stableJson(b.db)!==stableJson(DB)}
+function mergeKeyOf(arr){
+  if(arr.every(x=>typeof x==='string'))return null;
+  if(arr.every(x=>x&&typeof x==='object'&&!Array.isArray(x)&&typeof x.id==='string'))return x=>x.id;
+  if(arr.every(x=>x&&typeof x==='object'&&!Array.isArray(x)&&typeof x.name==='string'))return x=>x.name;
+  if(arr.every(x=>Array.isArray(x)&&typeof x[0]==='string'))return x=>x[0];
+  return null;
+}
+function mergeDbValue(b,l,c,ctx,path){
+  const S=stableJson;if(S(l)===S(c))return l;
+  if(b!==undefined){if(S(l)===S(b))return c;if(S(c)===S(b))return l}
+  if(Array.isArray(l)&&Array.isArray(c)){
+    const bArr=Array.isArray(b)?b:[],kf=mergeKeyOf([...bArr,...l,...c]);
+    if(!kf){const sb=new Set(bArr.map(S)),sl=new Set(l.map(S)),sc=new Set(c.map(S));return [...l.filter(x=>!(sb.has(S(x))&&!sc.has(S(x)))),...c.filter(x=>!sl.has(S(x))&&!sb.has(S(x)))]}
+    const mb=new Map(bArr.map(x=>[kf(x),x])),ml=new Map(l.map(x=>[kf(x),x])),mc=new Map(c.map(x=>[kf(x),x])),out=[];
+    for(const x of l){const k=kf(x);if(mc.has(k))out.push(mergeDbValue(mb.get(k),x,mc.get(k),ctx,path+'「'+k+'」'));else if(!mb.has(k)||S(x)!==S(mb.get(k)))out.push(x)}
+    for(const x of c){const k=kf(x);if(!ml.has(k)&&(!mb.has(k)||S(x)!==S(mb.get(k))))out.push(x)}
+    return out;
+  }
+  if(l&&c&&typeof l==='object'&&typeof c==='object'){const o={},bo=b&&typeof b==='object'?b:{};for(const k of new Set([...Object.keys(l),...Object.keys(c)])){if(!(k in c))o[k]=k in bo&&S(l[k])===S(bo[k])?undefined:l[k];else if(!(k in l))o[k]=k in bo&&S(c[k])===S(bo[k])?undefined:c[k];else o[k]=mergeDbValue(bo[k],l[k],c[k],ctx,path?path+'.'+k:k)}for(const k of Object.keys(o))if(o[k]===undefined)delete o[k];return o}
+  if(typeof l==='number'&&typeof c==='number'&&/Revision$/.test(path))return Math.max(l,c);
+  ctx.conflicts.push(path);return l;
+}
+function mergeDB(base,local,cloud){const ctx={conflicts:[]};const db=normalizeDB(mergeDbValue(base,local,cloud,ctx,''));return {db,conflicts:ctx.conflicts}}
+const DB_LABELS={places:'常用場所',history:'歷年勤務地點',members:'本隊人員',residence:'寓所人員',seatExcluded:'高鐵車廂不列入人員',advance:'先遣人員',escorts:'座車隨行',attire:'服裝選項',notePhraseGroups:'注意事項片語',ritePhrases:'儀節片語',settings:'設定',shortNames:'場所簡稱',hsr:'高鐵副站長電話'};
+const conflictText=c=>{if(!c.length)return '';const names=[...new Set(c.map(p=>DB_LABELS[p.split(/[.「]/)[0]]||p.split(/[.「]/)[0]))];return `；${c.length} 處兩邊都改過，以本機為準（${names.join('、')}）`};
+async function cloudFetchLib(){const d=JSON.parse(await cloudApi(CLOUD_LIB,{raw:true}));if(d?.kind!=='survey-editor-cloud-library')throw Error('雲端檔案不是會勘資料庫');return {db:normalizeDB(d.database),savedAt:d.savedAt}}
+async function cloudUploadLib(){
+  const meta=await cloudLibInfo(),base=cloudBase();let out=DB,note='';
+  if(meta&&base?.sha!==meta.sha){
+    if(!base){cloudStatus('這台裝置還沒和雲端資料庫同步過，為避免蓋掉其他裝置的修改，請先按「下載資料庫」，再上傳。');return}
+    const cloud=await cloudFetchLib(),m=mergeDB(base.db,DB,cloud.db);out=m.db;note='（雲端已被其他裝置更新，已自動合併'+conflictText(m.conflicts)+'）';
+  }
+  const res=await cloudPut(CLOUD_LIB,JSON.stringify({kind:'survey-editor-cloud-library',version:1,savedAt:new Date().toISOString(),database:out}),'更新會勘資料庫',meta?.sha);
+  DB=out;saveDB();setCloudBase(res?.content?.sha||'',out);render();await cloudLibInfo();cloudStatus(`已上傳資料庫：常用場所 ${DB.places.length} 筆${note}`);
+}
+async function cloudDownloadLib(){
+  const meta=await cloudLibInfo();if(!meta)return;const cloud=await cloudFetchLib(),base=cloudBase(),when=cloud.savedAt?new Date(cloud.savedAt).toLocaleString('zh-TW',{hour12:false}):'未知';
+  if(!base){$('cloudDialog').close();ask('以雲端資料庫取代本機？',`雲端版本（${when}）：常用場所 ${cloud.db.places.length} 筆。這台裝置還沒同步過，本機目前 ${DB.places.length} 筆將被取代。`,()=>{DB=cloud.db;saveDB();setCloudBase(meta.sha,cloud.db);render();cloudStatus('已套用雲端資料庫，之後上傳、下載都會自動合併');cloudLibInfo().catch(()=>{});notify('已套用雲端資料庫')},'取代');return}
+  if(!dbDirty()){DB=cloud.db;saveDB();setCloudBase(meta.sha,cloud.db);render();await cloudLibInfo();cloudStatus(`已下載雲端資料庫（${when}）`);return}
+  const m=mergeDB(base.db,DB,cloud.db);DB=m.db;saveDB();setCloudBase(meta.sha,cloud.db);render();await cloudLibInfo();
+  cloudStatus(`已下載並合併雲端資料庫（${when}），本機尚未上傳的修改都保留${conflictText(m.conflicts)}。請再按「上傳資料庫」讓其他裝置也拿到。`);
+}
+async function cloudLibInfo(){try{const meta=await cloudApi(CLOUD_LIB),base=cloudBase();$('cloudLibInfo').textContent='雲端資料庫：'+cloudSize(meta.size)+(!base?'（這台裝置尚未同步）':base.sha!==meta.sha?'（雲端有其他裝置的新版本）':dbDirty()?'（本機有尚未上傳的修改）':'（已同步）');return meta}catch(e){if(e.status===404){$('cloudLibInfo').textContent='雲端還沒有會勘資料庫，請先上傳一次。';return null}throw e}}
 $('cloudList').addEventListener('click',e=>{
   const load=e.target.closest('[data-cloud-load]'),del=e.target.closest('[data-cloud-del]');
   if(load)cloudRun('讀取紀錄',async()=>{const name=load.dataset.cloudLoad,text=await cloudApi(CLOUD_DIR+'/'+name,{raw:true});$('cloudDialog').close();await loadJsonFile(new File([text],name,{type:'application/json'}))});
