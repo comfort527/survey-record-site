@@ -488,6 +488,7 @@ const TYPES={...TRIP_TYPES,air_depart:TRIP_TYPES.hsr_depart,air_arrive:TRIP_TYPE
 const RAIL_CAR6_PEOPLE=[['永和','railSeat6Yonghe'],['泰安','railSeat6Taian'],['座官','railSeat6Officer'],['幹部','railSeat6Cadre']];
 // 5、7 車選單不列入的人員（存在資料庫「人員」分頁，可同步雲端）
 const RAIL_SEAT_EXCLUDED={has:n=>(typeof DB==='undefined'?[]:DB.seatExcluded||[]).includes(n)};
+const REGIONS=['台北','新北','桃園','新竹','苗栗','台中','彰化','南投','雲林','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','基隆','澎湖','金門','連江'];
 const CITIES=['臺北市','新北市','桃園市','臺中市','臺南市','高雄市','基隆市','新竹市','嘉義市','宜蘭縣','新竹縣','苗栗縣','彰化縣','南投縣','雲林縣','嘉義縣','屏東縣','臺東縣','花蓮縣','澎湖縣','金門縣','連江縣'];
 const COMMON_PLACE_NAMES=['敦南寓所','公保大樓','陽明寓所'];
 const AIRPORT_PLACES=[{name:'松山機場',city:'臺北市',aliases:['松山軍用機場','臺北松山機場','台北松山機場']},{name:'台東機場',city:'臺東縣',aliases:['臺東機場']},{name:'澎湖機場',city:'澎湖縣',aliases:[]}];
@@ -513,7 +514,6 @@ const DEFAULT_DB={
   seatExcluded:[],
   advance:[],
   hsr:{'高鐵南港站':'','高鐵臺北站':'','高鐵板橋站':'','高鐵桃園站':'','高鐵新竹站':'','高鐵苗栗站':'','高鐵臺中站':'','高鐵彰化站':'','高鐵雲林站':'','高鐵嘉義站':'','高鐵臺南站':'','高鐵左營站':''},
-  regions:['台北','新北','桃園','新竹','苗栗','台中','彰化','南投','雲林','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','基隆','澎湖','金門'],
   attire:['勤務衫','休閒襯衫','便服','西裝','輕便服'],
   prepLabels:['場檢','部署','重點','全員','場部'],
   ritePhrases:['蒞臨(…恭迎)','步行進入…','搭乘電梯至…樓','致詞(約…分)','合影1梯次(合影畢返座)','就座','頒獎予…','導覽(全程由…導覽)','恭送。','※備「高鐵站貴賓室」'],
@@ -565,7 +565,7 @@ function normalizeDB(raw){
   const d=clone(DEFAULT_DB);d.places=d.places.map(normalizePlace);
   if(!raw||typeof raw!=='object')return importHsrRooms(normalizeTransportLibrary(importHsrNames(d)));
   const strs=v=>Array.isArray(v)?v.map(x=>String(x??'').trim()).filter(Boolean):null;
-  for(const k of ['members','residence','seatExcluded','escorts','regions','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
+  for(const k of ['members','residence','seatExcluded','escorts','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
   if(Array.isArray(raw.advance))d.advance=raw.advance.filter(a=>a&&String(a.name||'').trim()).map(a=>({name:String(a.name).trim(),phone:String(a.phone||'').trim()}));
   if(raw.hsr&&typeof raw.hsr==='object')d.hsr=Object.fromEntries(Object.entries({...d.hsr,...raw.hsr}).map(([k,v])=>[k,String(v??'')]));
   if(Array.isArray(raw.shortNames))d.shortNames=raw.shortNames.filter(p=>Array.isArray(p)&&p[0]).map(p=>[String(p[0]).trim(),String(p[1]||'').trim()]);
@@ -826,7 +826,7 @@ function cityOptions(value='',placeholder='全部縣市'){return [['',placeholde
 function renderDatalists(){
   const places=new Set([...DB.places.map(p=>p.name),...Object.keys(DB.hsr),...DB.shortNames.map(p=>p[0])]);
   const opts=list=>[...list].map(v=>`<option value="${esc(v)}"></option>`).join('');
-  $('datalists').innerHTML=`<datalist id="placeList">${opts(places)}</datalist><datalist id="regionList">${opts(DB.regions)}</datalist><datalist id="attireList">${opts(DB.attire)}</datalist><datalist id="prepLabelList">${opts(PREP_LABELS)}</datalist>`;
+  $('datalists').innerHTML=`<datalist id="placeList">${opts(places)}</datalist><datalist id="regionList">${opts(REGIONS)}</datalist><datalist id="attireList">${opts(DB.attire)}</datalist><datalist id="prepLabelList">${opts(PREP_LABELS)}</datalist>`;
 }
 
 // 側欄：行程資訊區
@@ -874,7 +874,7 @@ function editorRender(){
 const selectedRegions=()=>String(state.global.region||'').split(/[、,，/／]/).map(s=>s.trim()).filter(Boolean);
 function editorGlobal(){
   const g=state.global;
-  const regions=selectedRegions(),regionOptions=[...new Set([...DB.regions,...regions])];
+  const regions=selectedRegions(),regionOptions=[...new Set([...REGIONS,...regions])];
   const escortOptions=[...new Set([...DB.escorts,DB.settings.escort,g.escort].filter(Boolean))].map(n=>[n,n]);
   if(!g.escort)escortOptions.unshift(['','請選擇']);
   const chips=(list,key,members)=>members.map(n=>`<button type="button" class="chip ${list.includes(n)?'on':''}" data-chip="${key}" data-name="${esc(n)}">${esc(n)}</button>`).join('')+list.filter(n=>!members.includes(n)).map(n=>`<button type="button" class="chip on" data-chip="${key}" data-name="${esc(n)}" title="臨時人員，點選移除">${esc(n)}</button>`).join('');
@@ -1429,7 +1429,7 @@ function dbRender(){
     c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
     const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
-    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('notePhrases','注意事項片語')}${box('attire','服裝選項')}${box('regions','地區選項')}</div>`;
+    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('notePhrases','注意事項片語')}${box('attire','服裝選項')}</div>`;
   }else{
     c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
