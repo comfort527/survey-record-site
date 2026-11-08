@@ -153,6 +153,17 @@ details:not([open])>.section-title:before{content:'▸'}
 .item-list-title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .item-list-title>h3{margin-right:auto}
 .phrase-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+.phrase-cats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
+.phrase-cat{font-size:14.5px;padding:2px 10px;border-radius:999px;border-color:#d4c6a2;color:#6a5a36;background:#fff}
+.phrase-cat.on{background:#8a6b2c;border-color:#7a5d22;color:#fff}
+.phrase-groups-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px}
+.phrase-groups-head h3{margin:0 auto 0 0;font-size:18px}
+.phrase-group{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:9px;padding:8px;background:#f7fafb}
+.pg-head{display:flex;gap:4px;align-items:center}
+.pg-head input{flex:1;font-weight:600}
+.pg-head button{flex:none;padding:3px 8px}
+.db-grid .phrase-group textarea{min-height:150px}
+.phrase-attire{margin-top:12px}
 .chip-btn{font-size:14.5px;padding:2px 8px;border-radius:6px;border:1px dashed #b8ab8b;background:#fffdf7;color:#6a5a36}
 .chip-btn:hover{background:#fff3d6}
 .chip-btn.contact{border-color:#7fb08a;color:#2f6b3c;background:#f4fbf5}
@@ -341,6 +352,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
   .db-list{max-height:220px}
   .preview-pane{padding:8px}
 }
+@media(min-width:1001px){.preview-toolbar{position:sticky;top:-10px;z-index:4;background:#dfe7ea;margin:-10px -14px 8px;padding:10px 14px 7px;border-bottom:1px solid #cbd7dc}body.preview-full .preview-toolbar{top:-14px;margin:-14px -22px 8px;padding:14px 22px 7px}body.preview-hidden .preview-toolbar{position:static;margin:0;padding:0;border-bottom:0}}
 @media print{header,aside,.editor,.preview-toolbar,.validation,.splitter,.mobile-nav,.mobile-bottom{display:none!important}.preview-pane{padding:0;background:#fff;overflow:visible}.paper{box-shadow:none;padding:0;transform:none!important;margin:0!important}.survey tr.selected-row td{background:transparent}.main-col{display:block}}
 .rail-seat-row>span{white-space:nowrap}
 .block-title.title-with-input{justify-content:flex-start}
@@ -478,7 +490,7 @@ document.querySelector('header h1 .version').textContent=APP_VERSION;
 
 const EMBEDDED=(()=>{try{return JSON.parse($('embeddedConfig').textContent||'{}')}catch{return {}}})();
 const REVISION=/^[a-z0-9-]{1,80}$/i.test(EMBEDDED.revision||'')?EMBEDDED.revision:'builtin-v11';
-const KEY={data:'survey-editor-v1:data',db:'survey-editor-v1:db:'+REVISION,split:'survey-editor-v1:preview-height',zoom:'survey-editor-v1:preview-zoom'};
+const KEY={data:'survey-editor-v1:data',db:'survey-editor-v1:db:'+REVISION,split:'survey-editor-v1:preview-height',zoom:'survey-editor-v1:preview-zoom',phraseCat:'survey-editor-v1:phrase-cat'};
 // 雲端權杖與道路表編輯器共用（同一網站時免重新輸入）；記住密碼的鍵名則分開，避免互相清除。
 const CLOUD_KEY='road-editor-cloud:v1',CLOUD_DIR='會勘紀錄',CLOUD_LIB='資料庫/會勘資料庫.json',UNLOCK_KEY='survey-editor-unlock:v1';
 const ls={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch{return false}},del(k){try{localStorage.removeItem(k)}catch{}}};
@@ -517,7 +529,7 @@ const DEFAULT_DB={
   attire:['勤務衫','休閒襯衫','便服','西裝','輕便服'],
   prepLabels:['場檢','部署','重點','全員','場部'],
   ritePhrases:['蒞臨(…恭迎)','步行進入…','搭乘電梯至…樓','致詞(約…分)','合影1梯次(合影畢返座)','就座','頒獎予…','導覽(全程由…導覽)','恭送。','※備「高鐵站貴賓室」'],
-  notePhrases:['空車隊？','控梯：','備用貴賓室？廁所？','致詞時使用講桌及手持麥克風。踏墊？','就座時保留席1席','安排並提供主桌座次','各講者時間提醒？','場內媒體區？場外媒體區？','準備手套、溼紙巾','門票？'],
+  notePhraseGroups:[{name:'一般',items:['空車隊？','控梯：','備用貴賓室？廁所？','致詞時使用講桌及手持麥克風。踏墊？','就座時保留席1席','安排並提供主桌座次','各講者時間提醒？','場內媒體區？場外媒體區？','準備手套、溼紙巾','門票？']}],
   contactRoles:['主辦','競辦','聯絡人','對口'],
   places:[
     {name:'高鐵臺北站',rites:[{kind:'note',text:'備「高鐵站貴賓室」'}]},
@@ -565,7 +577,9 @@ function normalizeDB(raw){
   const d=clone(DEFAULT_DB);d.places=d.places.map(normalizePlace);
   if(!raw||typeof raw!=='object')return importHsrRooms(normalizeTransportLibrary(importHsrNames(d)));
   const strs=v=>Array.isArray(v)?v.map(x=>String(x??'').trim()).filter(Boolean):null;
-  for(const k of ['members','residence','seatExcluded','escorts','attire','prepLabels','ritePhrases','notePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
+  for(const k of ['members','residence','seatExcluded','escorts','attire','prepLabels','ritePhrases','contactRoles']){const v=strs(raw[k]);if(v)d[k]=v}
+  if(Array.isArray(raw.notePhraseGroups))d.notePhraseGroups=raw.notePhraseGroups.filter(g=>g&&typeof g==='object').map(g=>({name:String(g.name??'').trim(),items:strs(g.items)||[]}));
+  else if(strs(raw.notePhrases))d.notePhraseGroups=[{name:'一般',items:strs(raw.notePhrases)}];
   if(Array.isArray(raw.advance))d.advance=raw.advance.filter(a=>a&&String(a.name||'').trim()).map(a=>({name:String(a.name).trim(),phone:String(a.phone||'').trim()}));
   if(raw.hsr&&typeof raw.hsr==='object')d.hsr=Object.fromEntries(Object.entries({...d.hsr,...raw.hsr}).map(([k,v])=>[k,String(v??'')]));
   if(Array.isArray(raw.shortNames))d.shortNames=raw.shortNames.filter(p=>Array.isArray(p)&&p[0]).map(p=>[String(p[0]).trim(),String(p[1]||'').trim()]);
@@ -577,6 +591,7 @@ function normalizeDB(raw){
   return importHsrRooms(normalizeTransportLibrary(importHsrNames(d)));
 }
 let DB=(()=>{let raw=EMBEDDED.database;try{const s=ls.get(KEY.db);if(s)raw=JSON.parse(s)}catch{}const db=normalizeDB(raw);if(!(Number(raw?.hsrNamesRevision)>=1)||!(Number(raw?.transportPlacesRevision)>=1)||!(Number(raw?.commonPlacesRevision)>=1)||!(Number(raw?.commonRailRevision)>=1)||!(Number(raw?.hsrRoomsRevision)>=1))ls.set(KEY.db,JSON.stringify(db));return db})();
+function readPhraseGroups(){const els=[...document.querySelectorAll('#dbContent [data-pg]')];if(!els.length)return false;DB.notePhraseGroups=els.map(el=>({name:el.querySelector('[data-pg-name]').value.trim(),items:text2lines(el.querySelector('[data-pg-items]').value)}));return true}
 function saveDB(){if(!ls.set(KEY.db,JSON.stringify(DB)))notify('資料庫暫存失敗，請先備份資料庫');renderDatalists()}
 const prepLead=()=>{const n=Number(DB.settings.prepLead);return Number.isFinite(n)&&n>=0?n:15};
 const findPlace=name=>{if(!name)return null;const key=canon(transportPlaceName(name)||name),p=DB.places.find(p=>canon(p.name)===key);if(p)return p;const r=DB.history.filter(r=>canon(transportPlaceName(r.name)||r.name)===key).sort((a,b)=>b.date.localeCompare(a.date))[0];return r?normalizePlace({...r.stop,name:r.name,city:r.city}):null};
@@ -698,7 +713,7 @@ const R=(t,b=false,c='')=>({t:String(t??''),b,c});
 const P=(runs,o={})=>({runs:runs.filter(r=>r.t!==''),jc:o.jc||'center',gap:o.gap||0,line:o.line||240,hang:o.hang||0,hangLeft:o.hangLeft||0,sz:o.sz||0,sp:o.sp??null});
 const q=v=>String(v??'').trim()||'？';
 const splitLines=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);
-function lineColor(key,l){if(l.tone==='black')return '';if(l.tone)return l.tone;if(key==='rites')return l.kind==='note'?'blue':'';return l.kind==='note'?'red':l.kind==='contact'?'green':''}
+function lineColor(key,l){if(l.tone==='black')return '';if(key==='notes'&&l.tone==='green')return '';if(l.tone)return l.tone;if(key==='rites')return l.kind==='note'?'blue':'';return l.kind==='note'?'red':''}
 function lineBold(key,l){const c=lineColor(key,l);if(l.kind==='step')return l.bold!==false;if(l.kind==='pre')return l.bold===true||(key==='notes'&&c==='red'&&l.bold!==false);if(l.kind==='note')return c==='red';return l.bold===true}
 
 function rocDateText(){const v=state.global.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return '？年？月？日(？)';const d=new Date(v+'T12:00:00');return `${d.getFullYear()-1911}年${d.getMonth()+1}月${d.getDate()}日(${'日一二三四五六'[d.getDay()]})`}
@@ -743,7 +758,7 @@ function ritesCell(i){
 function notesCell(i){
   const s=state.stops[i],ps=[];let prev=null;
   if(s.advance.length){const names=s.advance.map((nm,k)=>k===0&&s.advancePhone?nm+advancePhone(nm):nm);ps.push(P([R('先遣：'),R(names.join('、'))],{jc:'both',line:240,gap:1,sz:22,sp:-24}));prev='advance'}
-  if(isRail(s)&&s.deputyOn){ps.push(P(richRuns(`${stationShort(s.place)}值班副站長：${hsrPhone(s.place)||'？'}`,{c:'green'}),{jc:'left',line:240,gap:prev?0:1,sp:-24}));prev='deputy'}
+  if(isRail(s)&&s.deputyOn){ps.push(P(richRuns(`${stationShort(s.place)}值班副站長：${hsrPhone(s.place)||'？'}`,{}),{jc:'left',line:240,gap:prev?0:1,sp:-24}));prev='deputy'}
   for(const l of [...s.notes.filter(x=>x.kind==='contact'),...s.notes.filter(x=>x.kind!=='contact')]){
     if(!l.text.trim())continue;
     const c=lineColor('notes',l),b=lineBold('notes',l),gap=l.kind==='note'?(prev==='note'?0:prev?1.5:1):l.kind!==prev?1:0;
@@ -993,7 +1008,14 @@ function advanceEditor(s){
   const all=[...DB.advance.map(a=>a.name),...s.advance.filter(n=>!DB.advance.some(a=>a.name===n))];
   return `<div class="item-list-title"><h3 class="card-toggle adv-toggle" data-toggle-adv role="button" tabindex="0" aria-expanded="${advCardOpen}">先遣及聯絡人</h3><span class="adv-summary">${esc(advSummary(s))}</span>${toggleEl('advancePhone','第一位附電話',s.advancePhone)}</div><div class="adv-body"><div class="chip-grid">${all.map(n=>{const k=s.advance.indexOf(n);return `<button type="button" class="chip ${k>=0?'on':''}" data-chip="advance" data-name="${esc(n)}" title="${esc(n)}">${k===0&&s.advancePhone?'<span class="order" title="附電話">1</span>':''}${esc(railSeatLabel(n))}</button>`}).join('')}</div>${isRail(s)?`<label class="toggle deputy">${checkbox('deputyOn',s.deputyOn)}列出「${esc(stationShort(s.place))}值班副站長：${esc(hsrPhone(s.place)||'資料庫未設定')}」</label>`:''}<div class="sub-title"></div></div>`;
 }
-function toneLabel(key,l){const c=lineColor(key,l);if(key==='notes'&&l.kind==='note')return c==='red'?'待確認':c==='blue'?'已確認':c===''?'一般':'綠字';return {red:'紅',blue:'藍',green:'綠','':'黑'}[c]}
+function toneLabel(key,l){const c=lineColor(key,l);if(key==='notes'&&l.kind==='note')return c==='red'?'待確認':c==='blue'?'已確認':'一般';return {red:'紅',blue:'藍',green:'綠','':'黑'}[c]}
+let notePhraseCat=ls.get(KEY.phraseCat)||'';
+const phraseGroupLabel=(g,i)=>g.name||'種類'+(i+1);
+function notePhraseRow(key){
+  const gs=DB.notePhraseGroups.map((g,i)=>({g,i,label:phraseGroupLabel(g,i)})).filter(x=>x.g.items.length);if(!gs.length)return '';
+  const cur=gs.find(x=>x.label===notePhraseCat)||gs[0];
+  return `${gs.length>1?`<div class="phrase-cats">${gs.map(x=>`<button type="button" class="phrase-cat ${x===cur?'on':''}" data-phrase-cat="${esc(x.label)}">${esc(x.label)}</button>`).join('')}</div>`:''}<div class="phrase-row">${cur.g.items.map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}</div>`;
+}
 function lineEditor(s,key,opt={}){
   const contact=opt.only==='contact',scope=key==='notes'?(contact?'contact':'other'):'';
   const rows=s[key].map((l,i)=>[l,i]).filter(([l])=>key!=='notes'||(contact?l.kind==='contact':l.kind!=='contact'));let n=0;
@@ -1001,7 +1023,7 @@ function lineEditor(s,key,opt={}){
   const notesMain=key==='notes'&&!contact;
   let h=contact?`<div class="item-list-title contact-title"><h3>聯絡人</h3><button type="button" class="small" data-add-contact>＋ 聯絡人</button></div>`:`<div class="item-list-title">${notesMain?`<h3 class="card-toggle notes-toggle" data-toggle-notes role="button" tabindex="0" aria-expanded="${notesCardOpen}">${title}</h3><span class="notes-summary">${esc(notesSummary(s))}</span>`:`<h3>${title}</h3>`}${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
   if(notesMain)h+='<div class="notes-body">';
-  if(!contact&&key!=='rites')h+=`<div class="phrase-row">${(key==='rites'?DB.ritePhrases:DB.notePhrases).map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}</div>`;
+  if(!contact&&key!=='rites')h+=notePhraseRow(key);
   h+=rows.map(([l,i],k)=>{
     const tag=l.kind==='step'?(l.text.trim()?(++n)+'.':'#'):l.kind==='note'?'※':l.kind==='contact'?'聯絡':'說明',c=lineColor(key,l);
     return `<div class="line-row kind-${l.kind} tone-${c||'black'} ${lineBold(key,l)?'bold':''}" data-list="${key}" data-index="${i}" ${scope?`data-scope="${scope}"`:''}><button type="button" class="line-kind" data-line-act="kind" ${contact?'disabled':''} title="${contact?'聯絡人（綠字）':`切換類型：${LINE_KINDS[key].map(x=>x[1]).join('／')}`}">${tag}</button><textarea rows="1" data-line-text="${key}" data-index="${i}" aria-label="${title}第 ${k+1} 行" ${contact?'placeholder="例如：主辦王○○09xx-xxxxxx"':''}>${esc(l.text)}</textarea><div class="line-tools"><button type="button" class="small tone-btn" data-line-act="tone" title="切換顏色"><span class="tone-dot ${c||'black'}"></span>${toneLabel(key,l)}</button>${l.kind==='step'||l.kind==='pre'?`<button type="button" class="small bold-btn ${lineBold(key,l)?'on':''}" data-line-act="bold" title="粗體">粗</button>`:''}<button type="button" class="small" data-line-act="up" ${k===0?'disabled':''} aria-label="上移">↑</button><button type="button" class="small" data-line-act="down" ${k===rows.length-1?'disabled':''} aria-label="下移">↓</button><button type="button" class="small danger" data-line-act="del" aria-label="刪除">×</button></div></div>`;
@@ -1225,6 +1247,7 @@ $('editor').addEventListener('click',e=>{
   if(b.dataset.prepAdd){pushUndo();s.prepTimes.push({label:b.dataset.prepAdd,time:''});editorRender();previewRender();saveSoon();if(b.dataset.prepAdd!=='依中心勤務命令辦理')$('editor').querySelector(`[data-prep="${s.prepTimes.length-1}"][data-prep-field="time"]`)?.focus();return}
   if(b.dataset.prepDel!==undefined){pushUndo();s.prepTimes.splice(+b.dataset.prepDel,1);editorRender();previewRender();saveSoon();return}
   if(b.dataset.lineAdd){pushUndo();const key=b.dataset.lineAdd;s[key].push(blankLine(b.dataset.kind,''));editorRender();previewRender();saveSoon();focusLine(key,s[key].length-1,0);return}
+  if(b.dataset.phraseCat!==undefined){notePhraseCat=b.dataset.phraseCat;ls.set(KEY.phraseCat,notePhraseCat);editorRender();return}
   if(b.dataset.phrase){pushUndo();const key=b.dataset.phrase,text=b.dataset.text,note=text.startsWith('※');const l=blankLine(key==='notes'||note?'note':'step',text.replace(/^※\s*/,''));s[key].push(l);editorRender();previewRender();saveSoon();const t=$('editor').querySelector(`textarea[data-line-text="${key}"][data-index="${s[key].length-1}"]`);if(t){t.focus();const k=t.value.indexOf('…');if(k>=0)t.setSelectionRange(k,k+1);else t.setSelectionRange(t.value.length,t.value.length)}return}
   if(b.dataset.addContact!==undefined){pushUndo();const at=s.notes.reduce((m,l,i)=>l.kind==='contact'?i+1:m,0);s.notes.splice(at,0,blankLine('contact',''));editorRender();previewRender();saveSoon();focusLine('notes',at,0);return}
   if(b.dataset.role){pushUndo();s.notes.push(blankLine('contact',b.dataset.role+(b.dataset.role.endsWith('人')?'：':'')));editorRender();previewRender();saveSoon();focusLine('notes',s.notes.length-1,'end');return}
@@ -1233,7 +1256,7 @@ $('editor').addEventListener('click',e=>{
     const row=b.closest('.line-row'),key=row.dataset.list,i=+row.dataset.index,list=s[key],l=list[i];if(!l)return;pushUndo();
     const act=b.dataset.lineAct;
     if(act==='kind'){const kinds=LINE_KINDS[key].map(k=>k[0]);l.kind=kinds[(kinds.indexOf(l.kind)+1)%kinds.length];if(l.kind==='note')l.text=l.text.replace(/^※\s*/,'')}
-    else if(act==='tone'){const order=key==='notes'&&l.kind==='note'?['','blue','black','green']:['','red','blue','green','black'];const k=order.indexOf(l.tone);l.tone=order[(k+1)%order.length]}
+    else if(act==='tone'){const order=key==='notes'?(l.kind==='note'?['','blue','black']:['','red','blue']):['','red','blue','green','black'];const k=order.indexOf(l.tone);l.tone=order[(k+1)%order.length]}
     else if(act==='bold'){l.bold=!lineBold(key,l)}
     else if(act==='up'||act==='down'){const sc=row.dataset.scope,same=list.map((x,k)=>k).filter(k=>!sc||(sc==='contact')===(list[k].kind==='contact')),pos=same.indexOf(i),j=same[pos+(act==='up'?-1:1)];if(j!==undefined)[list[i],list[j]]=[list[j],list[i]]}
     else if(act==='del')list.splice(i,1);
@@ -1429,13 +1452,14 @@ function dbRender(){
     c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
     const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
-    c.innerHTML=`<p class="hint">每行一項。片語中的「…」會在插入後自動選取，方便直接改寫；以「※」開頭的儀節片語會加成附註。</p><div class="db-grid">${box('notePhrases','注意事項片語')}${box('attire','服裝選項')}</div>`;
+    const groups=DB.notePhraseGroups.map((g,i,a)=>`<div class="phrase-group" data-pg="${i}"><div class="pg-head"><input data-pg-name value="${esc(g.name)}" placeholder="種類名稱（例：車隊）" aria-label="種類名稱"><button type="button" class="small" data-pg-move="-1" title="往前移" ${i?'':'disabled'}>↑</button><button type="button" class="small" data-pg-move="1" title="往後移" ${i<a.length-1?'':'disabled'}>↓</button><button type="button" class="small danger" data-pg-del title="刪除這個種類">×</button></div><textarea data-pg-items placeholder="每行一個片語">${esc(lines2text(g.items))}</textarea></div>`).join('');
+    c.innerHTML=`<div class="phrase-groups-head"><h3>注意事項片語</h3><button type="button" class="small" data-pg-add>＋ 新增種類</button><button type="button" class="small save" data-pg-save>儲存片語</button></div><p class="hint">自行分種類，每個種類內每行一個片語；編輯區會依種類切換顯示。片語中的「…」插入後會自動選取。</p><div class="db-grid phrase-groups">${groups||'<p class="empty-hint">尚無片語，按「＋ 新增種類」開始。</p>'}</div><div class="db-grid phrase-attire">${box('attire','服裝選項')}</div>`;
   }else{
     c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
 }
 for(const b of document.querySelectorAll('[data-db-tab]'))b.onclick=()=>{dbTab=b.dataset.dbTab;dbRender()};
-$('databaseBtn').onclick=openDatabase;$('dbClose').onclick=()=>{$('dbDialog').close();render()};
+$('databaseBtn').onclick=openDatabase;$('dbClose').onclick=()=>{if(dbTab==='phrases'&&readPhraseGroups())saveDB();$('dbDialog').close();render()};
 $('dbContent').addEventListener('toggle',e=>{if(e.target.dataset.dbGroup)dbGroupOpen.set(e.target.dataset.dbGroup,e.target.open)},true);
 $('dbContent').addEventListener('input',e=>{if(e.target.id==='historySearch'){historyQuery=e.target.value;historyPage=0;const pos=e.target.selectionStart;dbRender();const el=$('historySearch');el.focus();el.setSelectionRange(pos,pos);return}if(e.target.id==='dbSearch'){dbSearch=e.target.value;const pos=e.target.selectionStart;dbRender();const s=$('dbSearch');s.focus();s.setSelectionRange(pos,pos)}});
 $('dbContent').addEventListener('change',e=>{
@@ -1444,12 +1468,17 @@ $('dbContent').addEventListener('change',e=>{
   else if('dbAdvance' in el.dataset)DB.advance=text2lines(el.value).map(t=>{const m=t.match(/^(.+?)\s*(0[\d-]{6,})?$/);return {name:(m?.[1]||t).trim(),phone:(m?.[2]||'').trim()}});
   else if(el.dataset.dbSetting)DB.settings[el.dataset.dbSetting]=el.dataset.dbSetting==='prepLead'?(minutesOf(el.value)??15):el.value.trim();
   else if(el.dataset.dbHsr)DB.hsr[el.dataset.dbHsr]=el.value.trim();
+  else if(el.closest('[data-pg]'))readPhraseGroups();
   else if('dbShort' in el.dataset)DB.shortNames=text2lines(el.value).map(t=>t.split(/[=＝]/).map(x=>x.trim())).filter(p=>p[0]).map(p=>[p[0],p[1]||p[0]]);
   else done=false;
   if(done){if(el.dataset.dbList==='escorts'){if(!DB.escorts.includes(DB.settings.escort))DB.settings.escort=DB.escorts[0]||'';dbRender()}saveDB();dbStatus('已儲存（本機）。要寫回 HTML 檔請按「匯出已校訂 HTML」。')}
 });
 $('dbContent').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.pgAdd!==undefined){readPhraseGroups();DB.notePhraseGroups.push({name:'',items:[]});saveDB();dbRender();const n=[...document.querySelectorAll('#dbContent [data-pg-name]')].pop();n?.focus();return}
+  if(b.dataset.pgSave!==undefined){readPhraseGroups();saveDB();dbRender();dbStatus('片語已儲存（本機）。要同步到其他裝置請到「雲端儲存」上傳資料庫。');return}
+  if(b.dataset.pgMove){readPhraseGroups();const i=+b.closest('[data-pg]').dataset.pg,j=i+Number(b.dataset.pgMove),a=DB.notePhraseGroups;if(j>=0&&j<a.length){[a[i],a[j]]=[a[j],a[i]];saveDB();dbRender()}return}
+  if(b.dataset.pgDel!==undefined){readPhraseGroups();const i=+b.closest('[data-pg]').dataset.pg,g=DB.notePhraseGroups[i];const del=()=>{DB.notePhraseGroups.splice(i,1);saveDB();dbRender();dbStatus('已刪除種類')};if(g.items.length)ask('刪除這個種類？','「'+phraseGroupLabel(g,i)+'」裡的 '+g.items.length+' 個片語會一起刪除。',del,'刪除');else del();return}
   if(b.dataset.historyId){historySelection=b.dataset.historyId;historyDraft=null;dbRender();return}
   if(b.dataset.historyPage){historyPage+=Number(b.dataset.historyPage);dbRender();return}
   if(b.dataset.historyAction){const action=b.dataset.historyAction;
