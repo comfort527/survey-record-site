@@ -166,6 +166,7 @@ details:not([open])>.section-title:before{content:'▸'}
 .db-grid .phrase-group textarea{min-height:150px}
 .db-sec-title{font-size:18px;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .db-sec-title:first-child{margin-top:0}
+.hint+.db-sec-title{margin-top:4px}
 .chip-btn{font-size:14.5px;padding:2px 8px;border-radius:6px;border:1px dashed #b8ab8b;background:#fffdf7;color:#6a5a36}
 .chip-btn:hover{background:#fff3d6}
 .chip-btn.contact{border-color:#7fb08a;color:#2f6b3c;background:#f4fbf5}
@@ -1457,15 +1458,21 @@ function dbRender(){
     const groups=DB.notePhraseGroups.map((g,i,a)=>`<div class="phrase-group" data-pg="${i}"><div class="pg-head"><input data-pg-name value="${esc(g.name)}" placeholder="種類名稱（例：車隊）" aria-label="種類名稱"><button type="button" class="small" data-pg-move="-1" title="往前移" ${i?'':'disabled'}>↑</button><button type="button" class="small" data-pg-move="1" title="往後移" ${i<a.length-1?'':'disabled'}>↓</button><button type="button" class="small danger" data-pg-del title="刪除這個種類">×</button></div><textarea data-pg-items placeholder="每行一個片語">${esc(lines2text(g.items))}</textarea></div>`).join('');
     c.innerHTML=`<div class="phrase-groups-head"><h3>注意事項片語</h3><button type="button" class="small" data-pg-add>＋ 新增種類</button><button type="button" class="small save" data-pg-save>儲存片語</button></div><p class="hint">自行分種類，每個種類內每行一個片語；編輯區會依種類切換顯示。片語中的「…」插入後會自動選取。</p><div class="db-grid phrase-groups">${groups||'<p class="empty-hint">尚無片語，按「＋ 新增種類」開始。</p>'}</div>`;
   }else{
-    c.innerHTML=`<h3 class="db-sec-title">人員</h3><div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div><h3 class="db-sec-title">其他設定</h3><div class="db-grid"><label class="field"><span>服裝選項（每行一項）</span><textarea data-db-list="attire">${esc(lines2text(DB.attire))}</textarea></label><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
+    c.innerHTML=`<div class="phrase-groups-head"><h3>設定</h3><button type="button" class="small save" data-settings-save>儲存設定</button></div><p class="hint">修改後按「儲存設定」；直接關閉視窗也會自動儲存。</p><h3 class="db-sec-title">人員</h3><div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div><h3 class="db-sec-title">其他設定</h3><div class="db-grid"><label class="field"><span>服裝選項（每行一項）</span><textarea data-db-list="attire">${esc(lines2text(DB.attire))}</textarea></label><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
 }
 for(const b of document.querySelectorAll('[data-db-tab]'))b.onclick=()=>{dbTab=b.dataset.dbTab;dbRender()};
-$('databaseBtn').onclick=openDatabase;$('dbClose').onclick=()=>{if(dbTab==='phrases'&&readPhraseGroups())saveDB();$('dbDialog').close();render()};
+$('databaseBtn').onclick=openDatabase;$('dbClose').onclick=()=>{if(dbTab==='phrases'&&readPhraseGroups())saveDB();if(dbTab==='settings'&&commitDbFields())saveDB();$('dbDialog').close();render()};
 $('dbContent').addEventListener('toggle',e=>{if(e.target.dataset.dbGroup)dbGroupOpen.set(e.target.dataset.dbGroup,e.target.open)},true);
 $('dbContent').addEventListener('input',e=>{if(e.target.id==='historySearch'){historyQuery=e.target.value;historyPage=0;const pos=e.target.selectionStart;dbRender();const el=$('historySearch');el.focus();el.setSelectionRange(pos,pos);return}if(e.target.id==='dbSearch'){dbSearch=e.target.value;const pos=e.target.selectionStart;dbRender();const s=$('dbSearch');s.focus();s.setSelectionRange(pos,pos)}});
 $('dbContent').addEventListener('change',e=>{
-  const el=e.target;if(el.id==='historyDateFilter'){historyDateQuery=el.value;historyPage=0;dbRender();return}let done=true;
+  const el=e.target;if(el.id==='historyDateFilter'){historyDateQuery=el.value;historyPage=0;dbRender();return}
+  if(applyDbField(el)){if(el.dataset.dbList==='escorts'){fixEscortDefault();dbRender()}saveDB();dbStatus('已儲存（本機）。要寫回 HTML 檔請按「匯出已校訂 HTML」。')}
+});
+function fixEscortDefault(){if(DB.settings.escort&&!DB.escorts.includes(DB.settings.escort))DB.settings.escort=DB.escorts[0]||''}
+const DB_FIELD_SEL='[data-db-list],[data-db-advance],[data-db-setting],[data-db-short]';
+function commitDbFields(){const els=[...document.querySelectorAll('#dbContent '+DB_FIELD_SEL)];els.forEach(applyDbField);if(els.length)fixEscortDefault();return els.length>0}
+function applyDbField(el){let done=true;
   if(el.dataset.dbList){const v=text2lines(el.value);DB[el.dataset.dbList]=['members','residence','escorts'].includes(el.dataset.dbList)?[...new Set(v)]:v}
   else if('dbAdvance' in el.dataset)DB.advance=text2lines(el.value).map(t=>{const m=t.match(/^(.+?)\s*(0[\d-]{6,})?$/);return {name:(m?.[1]||t).trim(),phone:(m?.[2]||'').trim()}});
   else if(el.dataset.dbSetting)DB.settings[el.dataset.dbSetting]=el.dataset.dbSetting==='prepLead'?(minutesOf(el.value)??15):el.value.trim();
@@ -1473,11 +1480,12 @@ $('dbContent').addEventListener('change',e=>{
   else if(el.closest('[data-pg]'))readPhraseGroups();
   else if('dbShort' in el.dataset)DB.shortNames=text2lines(el.value).map(t=>t.split(/[=＝]/).map(x=>x.trim())).filter(p=>p[0]).map(p=>[p[0],p[1]||p[0]]);
   else done=false;
-  if(done){if(el.dataset.dbList==='escorts'){if(!DB.escorts.includes(DB.settings.escort))DB.settings.escort=DB.escorts[0]||'';dbRender()}saveDB();dbStatus('已儲存（本機）。要寫回 HTML 檔請按「匯出已校訂 HTML」。')}
-});
+  return done;
+}
 $('dbContent').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.pgAdd!==undefined){readPhraseGroups();DB.notePhraseGroups.push({name:'',items:[]});saveDB();dbRender();const n=[...document.querySelectorAll('#dbContent [data-pg-name]')].pop();n?.focus();return}
+  if(b.dataset.settingsSave!==undefined){commitDbFields();saveDB();dbRender();dbStatus('設定已儲存（本機）。要同步到其他裝置請到「雲端儲存」上傳資料庫。');return}
   if(b.dataset.pgSave!==undefined){readPhraseGroups();saveDB();dbRender();dbStatus('片語已儲存（本機）。要同步到其他裝置請到「雲端儲存」上傳資料庫。');return}
   if(b.dataset.pgMove){readPhraseGroups();const i=+b.closest('[data-pg]').dataset.pg,j=i+Number(b.dataset.pgMove),a=DB.notePhraseGroups;if(j>=0&&j<a.length){[a[i],a[j]]=[a[j],a[i]];saveDB();dbRender()}return}
   if(b.dataset.pgDel!==undefined){readPhraseGroups();const i=+b.closest('[data-pg]').dataset.pg,g=DB.notePhraseGroups[i];const del=()=>{DB.notePhraseGroups.splice(i,1);saveDB();dbRender();dbStatus('已刪除種類')};if(g.items.length)ask('刪除這個種類？','「'+phraseGroupLabel(g,i)+'」裡的 '+g.items.length+' 個片語會一起刪除。',del,'刪除');else del();return}
