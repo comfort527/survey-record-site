@@ -154,8 +154,9 @@ details:not([open])>.section-title:before{content:'▸'}
 .item-list-title>h3{margin-right:auto}
 .phrase-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
 .phrase-cats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
-.phrase-cat{font-size:14.5px;padding:2px 10px;border-radius:999px;border-color:#d4c6a2;color:#6a5a36;background:#fff}
-.phrase-cat.on{background:#8a6b2c;border-color:#7a5d22;color:#fff}
+.phrase-cat{font-size:14.5px;padding:2px 11px;border-radius:6px;border:1px solid #9aa9bd;color:#3d4b5e;background:#f2f5f9;font-weight:600}
+.phrase-cat.on{background:#45566e;border-color:#3a4a60;color:#fff}
+.phrase-cats+.phrase-row{background:#fff9ec;border:1px solid #eadfc4;border-radius:7px;padding:5px}
 .phrase-groups-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px}
 .phrase-groups-head h3{margin:0 auto 0 0;font-size:18px}
 .phrase-group{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:9px;padding:8px;background:#f7fafb}
@@ -163,7 +164,8 @@ details:not([open])>.section-title:before{content:'▸'}
 .pg-head input{flex:1;font-weight:600}
 .pg-head button{flex:none;padding:3px 8px}
 .db-grid .phrase-group textarea{min-height:150px}
-.phrase-attire{margin-top:12px}
+.db-sec-title{font-size:18px;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.db-sec-title:first-child{margin-top:0}
 .chip-btn{font-size:14.5px;padding:2px 8px;border-radius:6px;border:1px dashed #b8ab8b;background:#fffdf7;color:#6a5a36}
 .chip-btn:hover{background:#fff3d6}
 .chip-btn.contact{border-color:#7fb08a;color:#2f6b3c;background:#f4fbf5}
@@ -353,6 +355,8 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
   .preview-pane{padding:8px}
 }
 @media(min-width:1001px){.preview-toolbar{position:sticky;top:-10px;z-index:4;background:#dfe7ea;margin:-10px -14px 8px;padding:10px 14px 7px;border-bottom:1px solid #cbd7dc}body.preview-full .preview-toolbar{top:-14px;margin:-14px -22px 8px;padding:14px 22px 7px}body.preview-hidden .preview-toolbar{position:static;margin:0;padding:0;border-bottom:0}}
+@media(max-width:1000px){.preview-pane{overflow:visible}body.preview-full .preview-pane{overflow:auto}.preview-toolbar{position:sticky;top:0;z-index:4;background:#dfe7ea;margin:-10px -14px 8px;padding:10px 14px 7px;border-bottom:1px solid #cbd7dc}body.preview-full .preview-toolbar{top:-14px;margin:-14px -22px 8px;padding:14px 22px 7px}body.preview-hidden .preview-toolbar{position:static;margin:0;padding:0;border-bottom:0}}
+@media(max-width:700px){body:not(.preview-full) .preview-toolbar{top:52px;margin:-8px -8px 8px;padding:8px 8px 6px}body.preview-hidden .preview-toolbar{position:static;margin:0;padding:0;border-bottom:0}}
 @media print{header,aside,.editor,.preview-toolbar,.validation,.splitter,.mobile-nav,.mobile-bottom{display:none!important}.preview-pane{padding:0;background:#fff;overflow:visible}.paper{box-shadow:none;padding:0;transform:none!important;margin:0!important}.survey tr.selected-row td{background:transparent}.main-col{display:block}}
 .rail-seat-row>span{white-space:nowrap}
 .block-title.title-with-input{justify-content:flex-start}
@@ -441,7 +445,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 
 <dialog id="dbDialog" class="db-dialog">
   <div class="db-header"><h2>常用資料庫</h2><button id="dbClose" type="button">關閉</button></div>
-  <div class="db-tabs" role="tablist"><button type="button" data-db-tab="places">常用場所</button><button type="button" data-db-tab="history">歷年勤務地點</button><button type="button" data-db-tab="people">人員</button><button type="button" data-db-tab="phrases">片語與選項</button><button type="button" data-db-tab="settings">設定</button></div>
+  <div class="db-tabs" role="tablist"><button type="button" data-db-tab="places">常用場所</button><button type="button" data-db-tab="history">歷年勤務地點</button><button type="button" data-db-tab="phrases">片語</button><button type="button" data-db-tab="settings">設定</button></div>
   <div id="dbContent"></div>
   <div class="db-footer"><span id="dbStatus" class="db-status" role="status">儲存後可「匯出已校訂 HTML」，將最新資料庫寫入 HTML，供離線使用。</span><div class="tool-row"><button id="dbHtmlExport" type="button" class="primary">匯出已校訂 HTML</button><button id="dbExport" type="button">備份資料庫</button><button id="dbImport" type="button">匯入資料庫</button></div></div>
 </dialog>
@@ -1448,14 +1452,11 @@ function dbRender(){
     <div class="db-edit">${p?`<div class="grid-2"><label class="field"><span>場所名稱</span><input id="dbpName" value="${esc(p.name)}" readonly></label><label class="field"><span>縣市</span><select id="dbpCity" disabled>${cityOptions(p.city,'未分類')}</select></label></div>${/^高鐵/.test(p.name)?`<label class="field"><span>值班副站長電話</span><input id="dbpDeputy" data-db-hsr="${esc(p.name)}" value="${esc(hsrPhone(p.name))}" placeholder="09xx-xxxxxx"></label>`:`<div class="grid-2"><label class="field"><span>地址（可換行）</span><textarea id="dbpAddress">${esc(p.address)}</textarea></label><label class="field"><span>場所其他行（樓層、廳別）</span><textarea id="dbpLines">${esc(p.placeLines)}</textarea></label></div>`}<label class="field"><span>儀節預設行（「※」開頭為附註、「1.」開頭為步驟）</span><textarea id="dbpRites">${esc(serializeLines(p.rites,'rites'))}</textarea></label><label class="field"><span>注意事項預設行（「※」開頭為待確認事項、含電話者為聯絡人）</span><textarea id="dbpNotes">${esc(serializeLines(p.notes,'notes'))}</textarea></label><div class="db-save-row"><button type="button" class="primary" id="dbpSave">儲存此場所</button></div><p class="hint">新增場所或輸入場所名稱後，空白的地址、樓層、儀節與注意事項會自動帶入；已手動填寫的內容不會被覆蓋。</p>`:'<p class="empty-hint">請從左側選擇或新增常用場所。也可以在行程填好後按頁首的「場所存至資料庫」。</p>'}</div></div>`;
   }else if(dbTab==='history'){
     c.innerHTML=historyMarkup();
-  }else if(dbTab==='people'){
-    c.innerHTML=`<div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div>`;
   }else if(dbTab==='phrases'){
-    const box=(k,l)=>`<label class="field"><span>${l}</span><textarea data-db-list="${k}">${esc(lines2text(DB[k]))}</textarea></label>`;
     const groups=DB.notePhraseGroups.map((g,i,a)=>`<div class="phrase-group" data-pg="${i}"><div class="pg-head"><input data-pg-name value="${esc(g.name)}" placeholder="種類名稱（例：車隊）" aria-label="種類名稱"><button type="button" class="small" data-pg-move="-1" title="往前移" ${i?'':'disabled'}>↑</button><button type="button" class="small" data-pg-move="1" title="往後移" ${i<a.length-1?'':'disabled'}>↓</button><button type="button" class="small danger" data-pg-del title="刪除這個種類">×</button></div><textarea data-pg-items placeholder="每行一個片語">${esc(lines2text(g.items))}</textarea></div>`).join('');
-    c.innerHTML=`<div class="phrase-groups-head"><h3>注意事項片語</h3><button type="button" class="small" data-pg-add>＋ 新增種類</button><button type="button" class="small save" data-pg-save>儲存片語</button></div><p class="hint">自行分種類，每個種類內每行一個片語；編輯區會依種類切換顯示。片語中的「…」插入後會自動選取。</p><div class="db-grid phrase-groups">${groups||'<p class="empty-hint">尚無片語，按「＋ 新增種類」開始。</p>'}</div><div class="db-grid phrase-attire">${box('attire','服裝選項')}</div>`;
+    c.innerHTML=`<div class="phrase-groups-head"><h3>注意事項片語</h3><button type="button" class="small" data-pg-add>＋ 新增種類</button><button type="button" class="small save" data-pg-save>儲存片語</button></div><p class="hint">自行分種類，每個種類內每行一個片語；編輯區會依種類切換顯示。片語中的「…」插入後會自動選取。</p><div class="db-grid phrase-groups">${groups||'<p class="empty-hint">尚無片語，按「＋ 新增種類」開始。</p>'}</div>`;
   }else{
-    c.innerHTML=`<div class="db-grid"><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
+    c.innerHTML=`<h3 class="db-sec-title">人員</h3><div class="db-grid"><label class="field"><span>本隊人員（每行一人，依此順序輸出）</span><textarea data-db-list="members">${esc(lines2text(DB.members))}</textarea></label><label class="field"><span>寓所人員（每行一人，依此順序輸出）</span><textarea data-db-list="residence">${esc(lines2text(DB.residence))}</textarea></label><label class="field"><span>高鐵 5、7 車選單不列入的人員（每行一人）</span><textarea data-db-list="seatExcluded">${esc(lines2text(DB.seatExcluded||[]))}</textarea></label><label class="field"><span>先遣人員（每行「姓名 電話」）</span><textarea data-db-advance>${esc(DB.advance.map(a=>(a.name+' '+a.phone).trim()).join('\n'))}</textarea></label><div class="field"><label class="field"><span>座車隨行選項（每行一人，可新增）</span><textarea data-db-list="escorts">${esc(lines2text(DB.escorts))}</textarea></label><span>座車隨行預設（新增紀錄時套用）</span><select data-db-setting="escort"><option value="">不預設</option>${DB.escorts.map(n=>`<option value="${esc(n)}" ${DB.settings.escort===n?'selected':''}>${esc(n)}</option>`).join('')}</select><span style="margin-top:10px">預設出發／返抵場所</span><input data-db-setting="origin" value="${esc(DB.settings.origin||'')}" list="placeList"></div></div><h3 class="db-sec-title">其他設定</h3><div class="db-grid"><label class="field"><span>服裝選項（每行一項）</span><textarea data-db-list="attire">${esc(lines2text(DB.attire))}</textarea></label><label class="field"><span>備車提前（分鐘）</span><input data-db-setting="prepLead" value="${esc(DB.settings.prepLead)}" inputmode="numeric"></label><label class="field"><span>場所簡稱（每行「全名=簡稱」，用於「返敦南」）</span><textarea data-db-short>${esc(DB.shortNames.map(([a,b])=>a+'='+b).join('\n'))}</textarea></label></div>`;
   }
 }
 for(const b of document.querySelectorAll('[data-db-tab]'))b.onclick=()=>{dbTab=b.dataset.dbTab;dbRender()};
