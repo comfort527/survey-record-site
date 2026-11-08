@@ -153,6 +153,8 @@ details:not([open])>.section-title:before{content:'▸'}
 .item-list-title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .item-list-title>h3{margin-right:auto}
 .phrase-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+.phrase-box.is-closed{display:none}
+.phrase-toggle.on{background:#45566e;border-color:#3a4a60;color:#fff}
 .phrase-cats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
 .phrase-cat{font-size:14.5px;padding:2px 11px;border-radius:6px;border:1px solid #9aa9bd;color:#3d4b5e;background:#f2f5f9;font-weight:600}
 .phrase-cat.on{background:#45566e;border-color:#3a4a60;color:#fff}
@@ -495,7 +497,7 @@ document.querySelector('header h1 .version').textContent=APP_VERSION;
 
 const EMBEDDED=(()=>{try{return JSON.parse($('embeddedConfig').textContent||'{}')}catch{return {}}})();
 const REVISION=/^[a-z0-9-]{1,80}$/i.test(EMBEDDED.revision||'')?EMBEDDED.revision:'builtin-v11';
-const KEY={data:'survey-editor-v1:data',db:'survey-editor-v1:db:'+REVISION,split:'survey-editor-v1:preview-height',zoom:'survey-editor-v1:preview-zoom',phraseCat:'survey-editor-v1:phrase-cat'};
+const KEY={data:'survey-editor-v1:data',db:'survey-editor-v1:db:'+REVISION,split:'survey-editor-v1:preview-height',zoom:'survey-editor-v1:preview-zoom',phraseCat:'survey-editor-v1:phrase-cat',phraseOpen:'survey-editor-v1:phrase-open'};
 // 雲端權杖與道路表編輯器共用（同一網站時免重新輸入）；記住密碼的鍵名則分開，避免互相清除。
 const CLOUD_KEY='road-editor-cloud:v1',CLOUD_DIR='會勘紀錄',CLOUD_LIB='資料庫/會勘資料庫.json',UNLOCK_KEY='survey-editor-unlock:v1';
 const ls={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch{return false}},del(k){try{localStorage.removeItem(k)}catch{}}};
@@ -1015,19 +1017,19 @@ function advanceEditor(s){
   return `<div class="item-list-title"><h3 class="card-toggle adv-toggle" data-toggle-adv role="button" tabindex="0" aria-expanded="${advCardOpen}">先遣及聯絡人</h3><span class="adv-summary">${esc(advSummary(s))}</span>${toggleEl('advancePhone','第一位附電話',s.advancePhone)}</div><div class="adv-body"><div class="chip-grid">${all.map(n=>{const k=s.advance.indexOf(n);return `<button type="button" class="chip ${k>=0?'on':''}" data-chip="advance" data-name="${esc(n)}" title="${esc(n)}">${k===0&&s.advancePhone?'<span class="order" title="附電話">1</span>':''}${esc(railSeatLabel(n))}</button>`}).join('')}</div>${isRail(s)?`<label class="toggle deputy">${checkbox('deputyOn',s.deputyOn)}列出「${esc(stationShort(s.place))}值班副站長：${esc(hsrPhone(s.place)||'資料庫未設定')}」</label>`:''}<div class="sub-title"></div></div>`;
 }
 function toneLabel(key,l){const c=lineColor(key,l);if(key==='notes'&&l.kind==='note')return c==='red'?'待確認':c==='blue'?'已確認':'一般';return {red:'紅',blue:'藍',green:'綠','':'黑'}[c]}
-let notePhraseCat=ls.get(KEY.phraseCat)||'';
+let notePhraseCat=ls.get(KEY.phraseCat)||'',phraseOpen=ls.get(KEY.phraseOpen)!=='0';
 const phraseGroupLabel=(g,i)=>g.name||'種類'+(i+1);
 function notePhraseRow(key){
   const gs=DB.notePhraseGroups.map((g,i)=>({g,i,label:phraseGroupLabel(g,i)})).filter(x=>x.g.items.length);if(!gs.length)return '';
   const cur=gs.find(x=>x.label===notePhraseCat)||gs[0];
-  return `${gs.length>1?`<div class="phrase-cats">${gs.map(x=>`<button type="button" class="phrase-cat ${x===cur?'on':''}" data-phrase-cat="${esc(x.label)}">${esc(x.label)}</button>`).join('')}</div>`:''}<div class="phrase-row">${cur.g.items.map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}</div>`;
+  return `<div class="phrase-box ${phraseOpen?'':'is-closed'}">${gs.length>1?`<div class="phrase-cats">${gs.map(x=>`<button type="button" class="phrase-cat ${x===cur?'on':''}" data-phrase-cat="${esc(x.label)}">${esc(x.label)}</button>`).join('')}</div>`:''}<div class="phrase-row">${cur.g.items.map(p=>`<button type="button" class="chip-btn" data-phrase="${key}" data-text="${esc(p)}">${esc(p)}</button>`).join('')}</div></div>`;
 }
 function lineEditor(s,key,opt={}){
   const contact=opt.only==='contact',scope=key==='notes'?(contact?'contact':'other'):'';
   const rows=s[key].map((l,i)=>[l,i]).filter(([l])=>key!=='notes'||(contact?l.kind==='contact':l.kind!=='contact'));let n=0;
   const title=contact?'聯絡人':key==='rites'?'儀節':'注意事項';
   const notesMain=key==='notes'&&!contact;
-  let h=contact?`<div class="item-list-title contact-title"><h3>聯絡人</h3><button type="button" class="small" data-add-contact>＋ 聯絡人</button></div>`:`<div class="item-list-title">${notesMain?`<h3 class="card-toggle notes-toggle" data-toggle-notes role="button" tabindex="0" aria-expanded="${notesCardOpen}">${title}</h3><span class="notes-summary">${esc(notesSummary(s))}</span>`:`<h3>${title}</h3>`}${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button></div>`;
+  let h=contact?`<div class="item-list-title contact-title"><h3>聯絡人</h3><button type="button" class="small" data-add-contact>＋ 聯絡人</button></div>`:`<div class="item-list-title">${notesMain?`<h3 class="card-toggle notes-toggle" data-toggle-notes role="button" tabindex="0" aria-expanded="${notesCardOpen}">${title}</h3><span class="notes-summary">${esc(notesSummary(s))}</span>`:`<h3>${title}</h3>`}${LINE_KINDS[key].map(([k,l])=>`<button type="button" class="small" data-line-add="${key}" data-kind="${k}">＋ ${l}</button>`).join('')}<button type="button" class="small" data-mark="${key}" title="在最後點選的行加入 *；選取文字時前後各加一個。成對 *文字* 以紅色粗體輸出">插入 *</button>${notesMain&&DB.notePhraseGroups.some(g=>g.items.length)?`<button type="button" class="small phrase-toggle ${phraseOpen?'on':''}" data-phrase-toggle aria-expanded="${phraseOpen}" title="展開或收起片語">片語${phraseOpen?' ▴':' ▾'}</button>`:''}</div>`;
   if(notesMain)h+='<div class="notes-body">';
   if(!contact&&key!=='rites')h+=notePhraseRow(key);
   h+=rows.map(([l,i],k)=>{
@@ -1253,6 +1255,7 @@ $('editor').addEventListener('click',e=>{
   if(b.dataset.prepAdd){pushUndo();s.prepTimes.push({label:b.dataset.prepAdd,time:''});editorRender();previewRender();saveSoon();if(b.dataset.prepAdd!=='依中心勤務命令辦理')$('editor').querySelector(`[data-prep="${s.prepTimes.length-1}"][data-prep-field="time"]`)?.focus();return}
   if(b.dataset.prepDel!==undefined){pushUndo();s.prepTimes.splice(+b.dataset.prepDel,1);editorRender();previewRender();saveSoon();return}
   if(b.dataset.lineAdd){pushUndo();const key=b.dataset.lineAdd;s[key].push(blankLine(b.dataset.kind,''));editorRender();previewRender();saveSoon();focusLine(key,s[key].length-1,0);return}
+  if(b.dataset.phraseToggle!==undefined){phraseOpen=!phraseOpen;ls.set(KEY.phraseOpen,phraseOpen?'1':'0');b.classList.toggle('on',phraseOpen);b.setAttribute('aria-expanded',String(phraseOpen));b.textContent='片語'+(phraseOpen?' ▴':' ▾');$('editor').querySelector('.phrase-box')?.classList.toggle('is-closed',!phraseOpen);return}
   if(b.dataset.phraseCat!==undefined){notePhraseCat=b.dataset.phraseCat;ls.set(KEY.phraseCat,notePhraseCat);editorRender();return}
   if(b.dataset.phrase){pushUndo();const key=b.dataset.phrase,text=b.dataset.text,note=text.startsWith('※');const l=blankLine(key==='notes'||note?'note':'step',text.replace(/^※\s*/,''));s[key].push(l);editorRender();previewRender();saveSoon();const t=$('editor').querySelector(`textarea[data-line-text="${key}"][data-index="${s[key].length-1}"]`);if(t){t.focus();const k=t.value.indexOf('…');if(k>=0)t.setSelectionRange(k,k+1);else t.setSelectionRange(t.value.length,t.value.length)}return}
   if(b.dataset.addContact!==undefined){pushUndo();const at=s.notes.reduce((m,l,i)=>l.kind==='contact'?i+1:m,0);s.notes.splice(at,0,blankLine('contact',''));editorRender();previewRender();saveSoon();focusLine('notes',at,0);return}
