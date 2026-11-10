@@ -1243,7 +1243,11 @@ function parseLinesText(text,key){
 }
 function serializeLines(lines,key){let n=0;return lines.map(l=>l.kind==='step'?`${++n}.${l.text}`:l.kind==='note'?'※'+l.text:l.text).join('\n')}
 let lastLineField=null;
+let lastLineBlur=0;
 $('editor').addEventListener('focusin',e=>{if(e.target.dataset.lineText)lastLineField=e.target});
+$('editor').addEventListener('focusout',e=>{if(e.target.dataset.lineText)lastLineBlur=Date.now()});
+// 正在編輯中的那一行（含剛按下按鈕而離開的那一刻）
+function editingLineIndex(key){const t=lastLineField;if(!t?.isConnected||t.dataset.lineText!==key)return -1;if(t!==document.activeElement&&Date.now()-lastLineBlur>1500)return -1;const i=Number(t.dataset.index);return Number.isInteger(i)?i:-1}
 $('editor').addEventListener('click',e=>{
   const s=current(),b=e.target.closest('button');if(!b)return;
   if(b.dataset.railPick){const key=b.dataset.railPick;if(s?.type!=='hsr_depart'||!['railSeats5','railSeats7'].includes(key))return;pushUndo();toggleRailPick(s,key,b.dataset.label);refreshRailSeatingEditor(s);afterEdit();const inp=$('editor').querySelector(`[data-rail-free="${key}"]`);if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}return}
@@ -1254,7 +1258,7 @@ $('editor').addEventListener('click',e=>{
     editorRender();previewRender();saveSoon();return}
   if(b.dataset.prepAdd){pushUndo();s.prepTimes.push({label:b.dataset.prepAdd,time:''});editorRender();previewRender();saveSoon();if(b.dataset.prepAdd!=='依中心勤務命令辦理')$('editor').querySelector(`[data-prep="${s.prepTimes.length-1}"][data-prep-field="time"]`)?.focus();return}
   if(b.dataset.prepDel!==undefined){pushUndo();s.prepTimes.splice(+b.dataset.prepDel,1);editorRender();previewRender();saveSoon();return}
-  if(b.dataset.lineAdd){pushUndo();const key=b.dataset.lineAdd;s[key].push(blankLine(b.dataset.kind,''));editorRender();previewRender();saveSoon();focusLine(key,s[key].length-1,0);return}
+  if(b.dataset.lineAdd){pushUndo();const key=b.dataset.lineAdd,cur=key==='rites'?editingLineIndex(key):-1,at=cur>=0&&cur<s[key].length?cur+1:s[key].length;s[key].splice(at,0,blankLine(b.dataset.kind,''));editorRender();previewRender();saveSoon();focusLine(key,at,0);return}
   if(b.dataset.phraseToggle!==undefined){phraseOpen=!phraseOpen;ls.set(KEY.phraseOpen,phraseOpen?'1':'0');b.classList.toggle('on',phraseOpen);b.setAttribute('aria-expanded',String(phraseOpen));b.textContent='片語'+(phraseOpen?' ▴':' ▾');$('editor').querySelector('.phrase-box')?.classList.toggle('is-closed',!phraseOpen);return}
   if(b.dataset.phraseCat!==undefined){notePhraseCat=b.dataset.phraseCat;ls.set(KEY.phraseCat,notePhraseCat);editorRender();return}
   if(b.dataset.phrase){pushUndo();const key=b.dataset.phrase,text=b.dataset.text,note=text.startsWith('※');const l=blankLine(key==='notes'||note?'note':'step',text.replace(/^※\s*/,''));s[key].push(l);editorRender();previewRender();saveSoon();const t=$('editor').querySelector(`textarea[data-line-text="${key}"][data-index="${s[key].length-1}"]`);if(t){t.focus();const k=t.value.indexOf('…');if(k>=0)t.setSelectionRange(k,k+1);else t.setSelectionRange(t.value.length,t.value.length)}return}
