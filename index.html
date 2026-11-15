@@ -271,6 +271,7 @@ dialog p{font-size:18px;line-height:1.7;color:#566b78;white-space:pre-line}
 .cloud-size{font-size:14px;color:#7d8991}
 .cloud-empty{font-size:15px;color:#7d8991;padding:6px 0}
 #cloudDialog{max-width:640px}
+.token-row{display:flex;gap:6px;align-items:center}.token-row input{flex:1;min-width:0}.token-row button{flex:none;white-space:nowrap}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#203a43;color:#fff;padding:8px 20px;border-radius:9px;box-shadow:0 4px 25px #0002;max-width:90vw;z-index:60;font-size:17px}
 .mobile-nav,.mobile-bottom{display:none}
 
@@ -624,7 +625,7 @@ body[data-mobile-view="preview"] .preview-pane{animation:pm-fade .18s ease}
   <div class="db-header"><h2>雲端儲存</h2><button id="cloudClose" type="button">關閉</button></div>
   <details class="cloud-sec" id="cloudSetup"><summary>連線設定</summary>
     <p class="cloud-hint">資料存在你自己的 GitHub 私人 repo。權杖只保存在這台裝置的瀏覽器，不會寫進網頁；與道路表編輯器放在同一網站時共用同一組權杖。</p>
-    <label class="cloud-field">GitHub 權杖<input id="cloudToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+    <div class="cloud-field"><label for="cloudToken">GitHub 權杖</label><div class="token-row"><input id="cloudToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><button type="button" id="cloudTokenShow" class="small" aria-pressed="false" title="顯示或隱藏權杖">顯示</button><button type="button" id="cloudTokenCopy" class="small" title="複製權杖，貼到其他裝置使用">複製</button></div></div>
     <label class="cloud-field">資料 repo（帳號/名稱）<input id="cloudRepo" autocomplete="off" spellcheck="false" placeholder="comfort527/road-table-data"></label>
     <div class="tool-row"><button id="cloudConnect" type="button" class="primary">儲存並測試連線</button><button id="cloudForget" type="button" class="danger">清除此裝置的權杖</button></div>
   </details>
@@ -1776,7 +1777,11 @@ $('cloudList').addEventListener('click',e=>{
   if(del){const f=cloudFiles.find(x=>x.name===del.dataset.cloudDel);if(!f)return;$('cloudDialog').close();ask('刪除雲端紀錄？',`確定刪除雲端的「${f.name}」？（GitHub 仍會保留歷史版本）`,()=>{$('cloudDialog').showModal();cloudRun('刪除',async()=>{await cloudApi(f.path,{method:'DELETE',body:{message:'刪除會勘紀錄：'+f.name,sha:f.sha}});await cloudLoadList();cloudStatus('已刪除：'+f.name)})},'刪除')}
 });
 $('cloudFileInput').addEventListener('change',e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;cloudRun('上傳 JSON',async()=>{await cloudLoadList();let n=0;for(const f of files){const text=await f.text();const d=JSON.parse(text);if(!Array.isArray(d?.stops))throw Error(f.name+' 不是會勘紀錄 JSON');const name=safeFileName(f.name.replace(/\.json$/i,''))+'.json',old=cloudFiles.find(x=>x.name===name);await cloudPut(CLOUD_DIR+'/'+name,text,'上傳會勘紀錄：'+name,old?.sha);n++}await cloudLoadList();cloudStatus(`已上傳 ${n} 個檔案`)})});
-$('cloudBtn').onclick=()=>{$('cloudToken').value=cloudCfg.token||'';$('cloudRepo').value=cloudCfg.repo||'comfort527/road-table-data';$('cloudSetup').open=!cloudReady();cloudStatus('');cloudRenderState();cloudListRender();$('cloudDialog').showModal();if(cloudReady())cloudRun('讀取雲端清單',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')})};
+function hideCloudToken(){$('cloudToken').type='password';$('cloudTokenShow').textContent='顯示';$('cloudTokenShow').setAttribute('aria-pressed','false')}
+$('cloudTokenShow').onclick=()=>{const i=$('cloudToken'),show=i.type==='password';i.type=show?'text':'password';$('cloudTokenShow').textContent=show?'隱藏':'顯示';$('cloudTokenShow').setAttribute('aria-pressed',String(show))};
+$('cloudTokenCopy').onclick=async()=>{const i=$('cloudToken'),v=i.value.trim();if(!v){notify('這台裝置還沒有權杖');return}try{await navigator.clipboard.writeText(v)}catch{const t=i.type;i.type='text';i.select();document.execCommand('copy');i.type=t;i.blur()}notify('已複製權杖，請只貼到自己的裝置')};
+$('cloudDialog').addEventListener('close',hideCloudToken);
+$('cloudBtn').onclick=()=>{hideCloudToken();$('cloudToken').value=cloudCfg.token||'';$('cloudRepo').value=cloudCfg.repo||'comfort527/road-table-data';$('cloudSetup').open=!cloudReady();cloudStatus('');cloudRenderState();cloudListRender();$('cloudDialog').showModal();if(cloudReady())cloudRun('讀取雲端清單',async()=>{await cloudLoadList();await cloudLibInfo();cloudStatus('')})};
 
 $('editor').addEventListener('click',e=>{if(e.target.closest('[data-toggle-time]'))toggleTimeCard();if(e.target.closest('[data-toggle-adv]'))toggleAdvCard();if(e.target.closest('[data-toggle-notes]'))toggleNotesCard()});
 $('editor').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-time]')){e.preventDefault();toggleTimeCard()}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-adv]')){e.preventDefault();toggleAdvCard()}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-toggle-notes]')){e.preventDefault();toggleNotesCard()}});
